@@ -498,9 +498,9 @@ var _unused = (() => {
   function RiskSnapshot({ clients, onSelectClient, onGoToRenewals }) {
     const [expanded, setExpanded] = React.useState(null);
     const toggle = (bucket) => setExpanded((prev) => prev === bucket ? null : bucket);
-    const redClients = clients.filter((c) => getCurrentHealth(c) === "Red");
-    const yellowClients = clients.filter((c) => getCurrentHealth(c) === "Yellow");
     const churningClients = clients.filter((c) => c.churning && !c.archived);
+    const redClients = clients.filter((c) => getCurrentHealth(c) === "Red" && !c.churning);
+    const yellowClients = clients.filter((c) => getCurrentHealth(c) === "Yellow" && !c.churning);
     const redARR = redClients.reduce((a, c) => a + (Number(c.arr) || Number(c.aop) || 0), 0);
     const yellowARR = yellowClients.reduce((a, c) => a + (Number(c.arr) || Number(c.aop) || 0), 0);
     const churningARR = churningClients.reduce((a, c) => a + (Number(c.arr) || Number(c.aop) || 0), 0);
