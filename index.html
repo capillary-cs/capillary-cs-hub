@@ -569,7 +569,7 @@ var _unused = (() => {
       /* @__PURE__ */ React.createElement("div", { className: "text-2xl font-bold text-rose-700" }, fmt$(churningARR)),
       /* @__PURE__ */ React.createElement("div", { className: "text-xs text-rose-500 mt-1" }, churningClients.length, " client", churningClients.length !== 1 ? "s" : "", " flagged as churning"),
       expanded === "churning" && /* @__PURE__ */ React.createElement(ClientDropdown, { list: churningClients, colorClass: "text-rose-600" })
-    )));
+    ))));
   }
   function HomeView({ clients, opps, onSelectClient, platformFilter, onSetPlatformFilter, onGoToRenewals, teamGoals, onGoToGoals, onGoToWhitespace }) {
     const activeClients = clients.filter((c) => !c.archived);
