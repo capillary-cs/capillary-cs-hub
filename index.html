@@ -569,22 +569,7 @@ var _unused = (() => {
       /* @__PURE__ */ React.createElement("div", { className: "text-2xl font-bold text-rose-700" }, fmt$(churningARR)),
       /* @__PURE__ */ React.createElement("div", { className: "text-xs text-rose-500 mt-1" }, churningClients.length, " client", churningClients.length !== 1 ? "s" : "", " flagged as churning"),
       expanded === "churning" && /* @__PURE__ */ React.createElement(ClientDropdown, { list: churningClients, colorClass: "text-rose-600" })
-    ))), atRiskList.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "card" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-4" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("span", { className: "text-lg" }, "\u26A0\uFE0F"), /* @__PURE__ */ React.createElement("h2", { className: "font-bold text-gray-800" }, "At-Risk Alerts")), /* @__PURE__ */ React.createElement("span", { className: "text-xs text-gray-400" }, atRiskList.length, " client", atRiskList.length !== 1 ? "s" : "", " flagged")), /* @__PURE__ */ React.createElement("div", { className: "space-y-2" }, atRiskList.map(({ c, risk }) => {
-      const health = getCurrentHealth(c);
-      const bad = risk.type === "chronic" || risk.type === "overdue";
-      return /* @__PURE__ */ React.createElement(
-        "div",
-        {
-          key: c.id,
-          className: `flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:opacity-80 transition-opacity border ${bad ? "bg-red-50 border-red-100" : "bg-orange-50 border-orange-100"}`,
-          onClick: () => onSelectClient(c.id)
-        },
-        /* @__PURE__ */ React.createElement(HealthDot, { health, size: 20 }),
-        /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" }, /* @__PURE__ */ React.createElement("div", { className: "font-semibold text-gray-800 text-sm" }, c.name), /* @__PURE__ */ React.createElement("div", { className: `text-xs mt-0.5 ${bad ? "text-red-600" : "text-orange-600"}` }, risk.reason)),
-        /* @__PURE__ */ React.createElement("div", { className: "text-right shrink-0" }, /* @__PURE__ */ React.createElement("div", { className: "text-xs font-semibold text-gray-700" }, c.arr || c.aop ? fmt$(c.arr || c.aop) : ""), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400" }, c.execSponsor || "")),
-        /* @__PURE__ */ React.createElement("span", { className: "text-gray-300 text-xs" }, "\u2192")
-      );
-    }))));
+    )));
   }
   function HomeView({ clients, opps, onSelectClient, platformFilter, onSetPlatformFilter, onGoToRenewals, teamGoals, onGoToGoals, onGoToWhitespace }) {
     const activeClients = clients.filter((c) => !c.archived);
