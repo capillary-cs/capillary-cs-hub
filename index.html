@@ -227,7 +227,7 @@ var _unused = (() => {
       const n = Number(out.value);
       out.value = isNaN(n) ? null : n;
     }
-    if (out.status === "Closed-Won" || out.status === "Closed-Lost") {
+    if ((out.status === "Closed-Won" || out.status === "Closed-Lost") && !out.fiscalYear) {
       out.fiscalYear = "FY27";
     }
     return out;
