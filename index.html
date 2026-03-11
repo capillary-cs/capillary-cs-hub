@@ -71,18 +71,7 @@
       console.log('%cCapillary CS Hub', 'font-size:16px;font-weight:bold;color:#2080BD;');
       console.log('%cAccess to this console is monitored.', 'font-size:12px;color:#ef4444;');
     }, 1000);
-    // Detect DevTools open (basic detection via debugger timing)
-    var devtoolsOpen = false;
-    setInterval(function() {
-      var start = performance.now();
-      debugger;
-      var end = performance.now();
-      if (end - start > 100 && !devtoolsOpen) {
-        devtoolsOpen = true;
-        console.clear();
-        console.log('%cDeveloper tools detected. All activity is logged.', 'font-size:14px;color:#ef4444;font-weight:bold;');
-      }
-    }, 3000);
+    // DevTools detection removed for compatibility
   })();
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -2066,7 +2055,7 @@ var _unused = (() => {
     const TITLES = { executive: "Executive Portfolio Summary", risk: "Revenue at Risk", renewal: "Renewal Pipeline", expansion: "Expansion Pipeline", arrByLead: "ARR Distribution by Account Lead", farmingByLead: "Farming & Pipeline by Account Lead", healthTrends: "Client Health Trends", npsReport: "NPS Portfolio Report" };
     const ICONS  = { executive: "📊", risk: "🚨", renewal: "📅", expansion: "🚀", arrByLead: "👥", farmingByLead: "🌱", healthTrends: "📈", npsReport: "⭐" };
     const content = id === "executive" ? /* @__PURE__ */ React.createElement(ExecReport, { clients, opps }) : id === "risk" ? /* @__PURE__ */ React.createElement(RiskReport, { clients, opps }) : id === "renewal" ? /* @__PURE__ */ React.createElement(RenewalReport, { clients }) : id === "expansion" ? /* @__PURE__ */ React.createElement(ExpansionReport, { clients, opps }) : id === "arrByLead" ? /* @__PURE__ */ React.createElement(ARRByLeadReport, { clients }) : id === "farmingByLead" ? /* @__PURE__ */ React.createElement(FarmingByLeadReport, { clients, opps }) : id === "healthTrends" ? /* @__PURE__ */ React.createElement(HealthTrendsReport, { clients }) : /* @__PURE__ */ React.createElement(NPSPortfolioReport, { clients });
-    const copyText = () => { const { isAdmin } = useRole ? useRole() : { isAdmin: false }; const el = document.getElementById("rpt-body"); if (el) navigator.clipboard.writeText(el.innerText).then(() => alert("Report text copied to clipboard!")); };
+    const copyText = () => { const el = document.getElementById("rpt-body"); if (el) navigator.clipboard.writeText(el.innerText).then(() => alert("Report text copied to clipboard!")); };
     return /* @__PURE__ */ React.createElement("div", { className: "p-6" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-5 no-print" }, /* @__PURE__ */ React.createElement("button", { onClick: onBack, className: "text-sm font-semibold flex items-center gap-1", style: { color: "#2080BD" } }, "← Back to Reports"), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, /* @__PURE__ */ React.createElement("button", { onClick: copyText, className: "btn-secondary text-sm" }, "📋 Copy Summary"), /* @__PURE__ */ React.createElement("button", { onClick: () => window.print(), className: "btn-primary text-sm" }, "🖨 Print / Save as PDF"))), /* @__PURE__ */ React.createElement("div", { id: "rpt-body" }, /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-5 mb-4 flex items-center justify-between", style: { background: "#0f172a" } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 700, letterSpacing: "0.07em", color: "#64748b", textTransform: "uppercase", marginBottom: 6 } }, "Capillary Technologies · Americas CS"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 22, fontWeight: 800, color: "white" } }, ICONS[id] + " " + TITLES[id])), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "right" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "#64748b", marginBottom: 2 } }, "Generated"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: "#e2e8f0" } }, now))), content));
   }
   function RptStatGrid({ stats }) {
@@ -2580,7 +2569,8 @@ var _unused = (() => {
     ) : /* @__PURE__ */ React.createElement("span", { className: "text-right w-full block" }, goal ? /* @__PURE__ */ React.createElement("span", { className: "font-semibold text-gray-800" }, goal >= 1e6 ? "$" + (goal / 1e6).toFixed(2) + "M" : "$" + (goal / 1e3).toFixed(0) + "K") : /* @__PURE__ */ React.createElement("span", { className: "text-xs text-gray-400" }, "\u2014"));
   }
   function GoalsView({ clients, onSelectClient, onUpdateClient, platformFilter, onSetPlatformFilter, teamGoals, onUpdateTeamGoals, opps }) {
-    const { canEdit } = useRole();
+    const { isAdmin } = useRole();
+    const canEdit = isAdmin;
     const [activeView, setActiveView] = React.useState("executive");
     const [filterSegment, setFilterSegment] = React.useState(platformFilter || "all");
     const [filterOwner, setFilterOwner] = React.useState("all");
