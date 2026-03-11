@@ -3029,6 +3029,8 @@ var _unused = (() => {
     }, []);
     const updateRole = async (id, role) => {
       await sbClient.from("user_roles").update({ role, updated_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", id);
+      const target = users.find(u => u.id === id);
+      logAudit(currentUserEmail, "change_role", "user", (target == null ? void 0 : target.email) || id, "New role: " + role);
       setUsers((prev) => prev.map((u) => u.id === id ? { ...u, role } : u));
       flash("Role updated \u2713");
     };
@@ -3044,6 +3046,7 @@ var _unused = (() => {
       }
       if (data) {
         setUsers((prev) => [...prev, data]);
+        logAudit(currentUserEmail, "add_user", "user", email, "Role: " + newRole);
         setNewEmail("");
         setNewName("");
         setNewRole("viewer");
@@ -3056,6 +3059,7 @@ var _unused = (() => {
         return;
       }
       await sbClient.from("user_roles").delete().eq("id", id);
+      logAudit(currentUserEmail, "remove_user", "user", email, null);
       setUsers((prev) => prev.filter((u) => u.id !== id));
       flash("User removed \u2713");
     };
@@ -3071,8 +3075,10 @@ var _unused = (() => {
       setUsers(prev => prev.map(u => {
         if (u.id !== userId) return u;
         const accts = u.assigned_accounts || [];
-        const next = accts.includes(clientId) ? accts.filter(a => a !== clientId) : [...accts, clientId];
+        const wasAssigned = accts.includes(clientId);
+        const next = wasAssigned ? accts.filter(a => a !== clientId) : [...accts, clientId];
         sbClient.from("user_roles").update({ assigned_accounts: next, updated_at: new Date().toISOString() }).eq("id", userId).then(() => {});
+        logAudit(currentUserEmail, wasAssigned ? "unassign_account" : "assign_account", "user", u.email || userId, "Account: " + clientId);
         return { ...u, assigned_accounts: next };
       }));
     };
@@ -3344,6 +3350,7 @@ var _unused = (() => {
       if (goals.fy27ARR != null) history["FY27"] = { target: goals.fy27ARR, updatedAt: new Date().toISOString() };
       if (teamGoals.fy26ARR != null && !history["FY26"]) history["FY26"] = { target: teamGoals.fy26ARR, updatedAt: new Date().toISOString() };
       setTeamGoals({ ...goals, goalHistory: history });
+      logAudit(getEmail(), "update_goals", "goals", "team_goals", null);
     };
     const exportData = () => {
       if (!isAdmin) { setToast({ message: "\u26D4 Export restricted to Admins" }); return; }
@@ -3355,6 +3362,7 @@ var _unused = (() => {
       a.download = "CapillaryCS_data_" + (/* @__PURE__ */ new Date()).toISOString().split("T")[0] + ".json";
       a.click();
       URL.revokeObjectURL(url);
+      logAudit(getEmail(), "export_data", "system", "full_export", null);
     };
     const importData = (e) => {
       if (!isAdmin) { setToast({ message: "\u26D4 Import restricted to Admins" }); return; }
@@ -3368,6 +3376,7 @@ var _unused = (() => {
           if (data.opps) setOpps(data.opps.map(sanitizeOpp));
           if (data.rels) setRels(data.rels);
           if (data.teamGoals) setTeamGoals(data.teamGoals);
+          logAudit(getEmail(), "import_data", "system", "full_import", null);
           setToast({ message: "Data imported successfully \u2713" });
         } catch (err) {
           setToast({ message: "Import failed \u2014 invalid file." });
@@ -3388,14 +3397,16 @@ var _unused = (() => {
       setOppBackView(backView);
       setView("oppDetail");
     };
-    const updateClient = (u) => setClients((prev) => prev.map((c) => c.id === u.id ? u : c));
-    const updateOpp = (u) => setOpps((prev) => prev.map((o) => o.id === u.id ? sanitizeOpp(u) : o));
-    const updateRels = (clientName, newContacts) => setRels((prev) => ({ ...prev, [clientName]: newContacts }));
-    const addClient = (c) => setClients((prev) => [...prev, c]);
-    const addOpp = (o) => setOpps((prev) => [...prev, o]);
+    const getEmail = () => { var _a2; return ((_a2 = session == null ? void 0 : session.user) == null ? void 0 : _a2.email) || "unknown"; };
+    const updateClient = (u) => { setClients((prev) => prev.map((c) => c.id === u.id ? u : c)); logAudit(getEmail(), "update_client", "client", u.name || u.id, null); };
+    const updateOpp = (u) => { setOpps((prev) => prev.map((o) => o.id === u.id ? sanitizeOpp(u) : o)); logAudit(getEmail(), "update_opportunity", "opportunity", u.name || u.id, null); };
+    const updateRels = (clientName, newContacts) => { setRels((prev) => ({ ...prev, [clientName]: newContacts })); logAudit(getEmail(), "update_relationships", "relationships", clientName, null); };
+    const addClient = (c) => { setClients((prev) => [...prev, c]); logAudit(getEmail(), "add_client", "client", c.name || c.id, null); };
+    const addOpp = (o) => { setOpps((prev) => [...prev, o]); logAudit(getEmail(), "add_opportunity", "opportunity", o.name || o.id, null); };
     const archiveClient = (client, lastEngagement) => {
       const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
       updateClient({ ...client, archived: true, archivedDate: today, lastEngagement: lastEngagement || today });
+      logAudit(getEmail(), "archive_client", "client", client.name, null);
       setArchiveModal(null);
       setToast({ message: `"${client.name}" archived.`, onUndo: () => {
         updateClient({ ...client, archived: false, archivedDate: null, lastEngagement: null });
@@ -3420,6 +3431,7 @@ var _unused = (() => {
           const oppSnapshot = opps;
           setClients((prev) => prev.filter((c) => c.id !== id));
           setOpps((prev) => prev.filter((o) => o.clientId !== id));
+          logAudit(getEmail(), "delete_client", "client", name, null);
           setConfirmData(null);
           setView("clients");
           setSelectedClientId(null);
@@ -3439,6 +3451,7 @@ var _unused = (() => {
         onConfirm: () => {
           const snapshot = opps;
           setOpps((prev) => prev.filter((o) => o.id !== id));
+          logAudit(getEmail(), "delete_opportunity", "opportunity", name, null);
           setConfirmData(null);
           setToast({ message: `"${name}" deleted.`, onUndo: () => {
             setOpps(snapshot);
@@ -3449,6 +3462,7 @@ var _unused = (() => {
     };
     const handleImportOpps = (newOpps) => {
       setOpps((prev) => [...prev, ...newOpps]);
+      logAudit(getEmail(), "import_opportunities", "opportunity", newOpps.length + " opportunities", null);
       setSaveMsg("Imported \u2713");
     };
     const handleImportHealth = (updates) => {
@@ -3456,6 +3470,7 @@ var _unused = (() => {
         if (!updates[c.id]) return c;
         return { ...c, healthHistory: { ...c.healthHistory, ...updates[c.id] } };
       }));
+      logAudit(getEmail(), "import_health", "client", Object.keys(updates).length + " clients", null);
       setSaveMsg("Health updated \u2713");
     };
     const handleImportNPS = (updates) => {
@@ -3463,6 +3478,7 @@ var _unused = (() => {
         if (!updates[c.id]) return c;
         return { ...c, ...updates[c.id] };
       }));
+      logAudit(getEmail(), "import_nps", "client", Object.keys(updates).length + " clients", null);
       setSaveMsg("NPS updated \u2713");
     };
     const sidebarResults = useMemo(() => {
