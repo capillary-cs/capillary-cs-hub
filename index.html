@@ -2216,31 +2216,33 @@ var _unused = (() => {
     ];
     var idx = 0;
     return React.createElement("div", { className: "p-6 max-w-3xl mx-auto" },
-      React.createElement("h1", { className: "text-2xl font-bold text-white mb-1" }, "\u2753 Frequently Asked Questions"),
-      React.createElement("p", { className: "text-slate-400 text-sm mb-6" }, "Quick answers about using the CS Hub. Your current role: ", React.createElement("span", { className: "font-semibold", style: { color: isAdmin ? "#a78bfa" : role === "account_lead" ? "#60a5fa" : "#94a3b8" } }, isAdmin ? "Admin" : role === "account_lead" ? "Account Lead" : "Viewer")),
+      React.createElement("div", { className: "mb-6" },
+        React.createElement("h1", { className: "text-xl font-semibold mb-1", style: { color: "#e2e8f0" } }, "Frequently Asked Questions"),
+        React.createElement("p", { className: "text-sm", style: { color: "#94a3b8" } }, "Quick answers about using the CS Hub. Your current role: ", React.createElement("span", { className: "font-semibold", style: { color: isAdmin ? "#a78bfa" : role === "account_lead" ? "#60a5fa" : "#94a3b8" } }, isAdmin ? "Admin" : role === "account_lead" ? "Account Lead" : "Viewer"))
+      ),
       faqs.map(function(section, si) {
-        return React.createElement("div", { key: si, className: "mb-6" },
-          React.createElement("h2", { className: "text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2" },
+        return React.createElement("div", { key: si, className: "mb-5" },
+          React.createElement("h2", { className: "text-xs font-semibold uppercase tracking-wider mb-2 flex items-center gap-2", style: { color: "#64748b" } },
             React.createElement("span", { className: "w-1.5 h-1.5 rounded-full", style: { background: "#2080BD" } }),
             section.category
           ),
           section.items.map(function(item) {
             var myIdx = idx++;
             var isOpen = openIdx === myIdx;
-            return React.createElement("div", { key: myIdx, className: "mb-2 rounded-lg overflow-hidden", style: { background: isOpen ? "#1e293b" : "#0f172a", border: "1px solid " + (isOpen ? "#334155" : "#1e293b"), transition: "all 0.2s" } },
-              React.createElement("button", { onClick: function() { toggle(myIdx); }, className: "w-full text-left px-4 py-3 flex items-center justify-between gap-3", style: { background: "transparent", border: "none", cursor: "pointer" } },
-                React.createElement("span", { className: "text-sm font-medium", style: { color: isOpen ? "#f1f5f9" : "#cbd5e1" } }, item.q),
-                React.createElement("span", { className: "text-xs flex-shrink-0", style: { color: "#64748b", transition: "transform 0.2s", transform: isOpen ? "rotate(180deg)" : "rotate(0)" } }, "\u25BC")
+            return React.createElement("div", { key: myIdx, className: "mb-1.5 rounded-md overflow-hidden", style: { background: isOpen ? "#1e293b" : "transparent", border: "1px solid " + (isOpen ? "#334155" : "#1e293b44"), transition: "all 0.2s" } },
+              React.createElement("button", { onClick: function() { toggle(myIdx); }, className: "w-full text-left px-4 py-2.5 flex items-center justify-between gap-3", style: { background: "transparent", border: "none", cursor: "pointer" } },
+                React.createElement("span", { className: "text-sm", style: { color: isOpen ? "#f1f5f9" : "#94a3b8", fontWeight: isOpen ? 500 : 400 } }, item.q),
+                React.createElement("span", { className: "text-xs flex-shrink-0", style: { color: "#475569", transition: "transform 0.2s", transform: isOpen ? "rotate(180deg)" : "rotate(0)" } }, "\u25BC")
               ),
               isOpen && React.createElement("div", { className: "px-4 pb-3", style: { borderTop: "1px solid #334155" } },
-                React.createElement("p", { className: "text-sm text-slate-300 pt-3", style: { whiteSpace: "pre-line", lineHeight: "1.6" } }, item.a)
+                React.createElement("p", { className: "text-sm pt-3", style: { color: "#cbd5e1", whiteSpace: "pre-line", lineHeight: "1.6" } }, item.a)
               )
             );
           })
         );
       }),
-      React.createElement("div", { className: "mt-8 p-4 rounded-lg", style: { background: "#2080BD10", border: "1px solid #2080BD30" } },
-        React.createElement("p", { className: "text-sm text-slate-400" }, "Still have questions? Reach out to your Admin or the CS Hub team for help.")
+      React.createElement("div", { className: "mt-6 p-4 rounded-md", style: { background: "#2080BD08", border: "1px solid #2080BD20" } },
+        React.createElement("p", { className: "text-sm", style: { color: "#64748b" } }, "Still have questions? Reach out to your Admin or the CS Hub team for help.")
       )
     );
   }
