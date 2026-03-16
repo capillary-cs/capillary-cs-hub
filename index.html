@@ -1080,6 +1080,203 @@ var _unused = (() => {
       ), showClosedClient && /* @__PURE__ */ React.createElement("div", { className: "space-y-2 opacity-75" }, closedFiltered.map((o) => /* @__PURE__ */ React.createElement(OppRow, { key: o.id, o }))))));
     })(), activeTab === "activity" && /* @__PURE__ */ React.createElement(CommentsSection, { comments: client.comments || [], onAdd: (text) => onUpdateClient({ ...client, comments: [...client.comments || [], { id: Date.now(), text, author: "You", date: (/* @__PURE__ */ new Date()).toLocaleDateString() }] }) }), activeTab === "meddicc" && /* @__PURE__ */ React.createElement(MEDDICCPanel, { client, onUpdateClient }));
   }
+
+  // Activity Type Colors
+  const ACTIVITY_TYPE_COLORS = {
+    "Call": "#3b82f6",
+    "Email": "#8b5cf6",
+    "Meeting": "#0891b2",
+    "Demo": "#f97316",
+    "Internal Note": "#64748b",
+    "Follow-Up": "#ec4899"
+  };
+
+  const ACTIVITY_TYPES = ["Call", "Email", "Meeting", "Demo", "Internal Note", "Follow-Up"];
+  const ACTIVITY_OUTCOMES = ["Positive", "Neutral", "Needs Attention"];
+
+  function ActivityBadge({ type, compact = false }) {
+    const color = ACTIVITY_TYPE_COLORS[type] || "#94a3b8";
+    return /* @__PURE__ */ React.createElement("span", {
+      className: compact ? "text-xs px-1.5 py-0.5 rounded-md font-semibold" : "text-xs px-2 py-1 rounded-lg font-semibold",
+      style: { background: color + "15", color: color, border: "1px solid " + color + "30" }
+    }, type);
+  }
+
+  function ActivityItem({ activity, client, opp, onDelete }) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const followUpDate = activity.followUpDate ? new Date(activity.followUpDate + "T00:00:00") : null;
+    const isOverdue = followUpDate && followUpDate < today;
+
+    return /* @__PURE__ */ React.createElement("div", { className: "border border-gray-100 rounded-lg p-3.5 hover:bg-gray-50 transition-colors" },
+      /* @__PURE__ */ React.createElement("div", { className: "flex items-start justify-between gap-3 mb-2" },
+        /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" },
+          /* @__PURE__ */ React.createElement(ActivityBadge, { type: activity.type, compact: false })
+        ),
+        /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400" }, activity.date ? new Date(activity.date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—")
+      ),
+      /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-600 mb-2" },
+        /* @__PURE__ */ React.createElement("strong", null, activity.who || "Unknown"),
+        " with ",
+        activity.stakeholder ? /* @__PURE__ */ React.createElement("span", null, activity.stakeholder) : /* @__PURE__ */ React.createElement("span", { className: "text-gray-400" }, "—")
+      ),
+      activity.notes && /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-700 mb-2" }, activity.notes),
+      activity.nextSteps && /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-600 mb-2 p-2 bg-blue-50 rounded border-l-2 border-blue-300" },
+        /* @__PURE__ */ React.createElement("strong", null, "Next Steps: "),
+        activity.nextSteps
+      ),
+      (activity.followUpDate || activity.outcome) && /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mt-2" },
+        activity.followUpDate && /* @__PURE__ */ React.createElement("span", {
+          className: "text-xs px-2 py-1 rounded-md font-semibold",
+          style: {
+            background: isOverdue ? "#fee2e2" : "#f0fdf4",
+            color: isOverdue ? "#991b1b" : "#166534",
+            border: isOverdue ? "1px solid #fca5a5" : "1px solid #86efac"
+          }
+        }, isOverdue ? "OVERDUE" : "Follow-up", ": ", new Date(activity.followUpDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })),
+        activity.outcome && /* @__PURE__ */ React.createElement("span", {
+          className: "text-xs px-2 py-1 rounded-md font-semibold",
+          style: {
+            background: activity.outcome === "Positive" ? "#dcfce7" : activity.outcome === "Neutral" ? "#f3f4f6" : "#fee2e2",
+            color: activity.outcome === "Positive" ? "#15803d" : activity.outcome === "Neutral" ? "#374151" : "#991b1b",
+            border: activity.outcome === "Positive" ? "1px solid #bbf7d0" : activity.outcome === "Neutral" ? "1px solid #d1d5db" : "1px solid #fca5a5"
+          }
+        }, activity.outcome)
+      )
+    );
+  }
+
+  function ActivitiesSection({ opp, onUpdateOpp, canEdit, currentUserEmail }) {
+    const [showForm, setShowForm] = React.useState(false);
+    const [form, setForm] = React.useState({
+      type: "Call",
+      date: new Date().toISOString().split("T")[0],
+      who: currentUserEmail || "",
+      stakeholder: "",
+      notes: "",
+      nextSteps: "",
+      followUpDate: "",
+      outcome: "Positive"
+    });
+
+    const handleAddActivity = () => {
+      const activity = {
+        id: Date.now().toString(),
+        ...form
+      };
+      const activities = opp.activities || [];
+      onUpdateOpp({ ...opp, activities: [activity, ...activities] });
+      setForm({
+        type: "Call",
+        date: new Date().toISOString().split("T")[0],
+        who: currentUserEmail || "",
+        stakeholder: "",
+        notes: "",
+        nextSteps: "",
+        followUpDate: "",
+        outcome: "Positive"
+      });
+      setShowForm(false);
+    };
+
+    const handleDeleteActivity = (id) => {
+      onUpdateOpp({ ...opp, activities: (opp.activities || []).filter((a) => a.id !== id) });
+    };
+
+    const activities = (opp.activities || []).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    return /* @__PURE__ */ React.createElement("div", { className: "card space-y-4" },
+      /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between gap-2 mb-3" },
+        /* @__PURE__ */ React.createElement("h3", { className: "font-semibold text-gray-700 text-sm" }, "Activity Log"),
+        canEdit && /* @__PURE__ */ React.createElement("button", {
+          onClick: () => setShowForm(!showForm),
+          className: "btn-primary text-xs"
+        }, "+ Log Activity")
+      ),
+      showForm && canEdit && /* @__PURE__ */ React.createElement("div", { className: "border border-blue-200 rounded-lg p-4 bg-blue-50 space-y-3 mb-4" },
+        /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-2" },
+          /* @__PURE__ */ React.createElement("div", null,
+            /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Type"),
+            /* @__PURE__ */ React.createElement("select", {
+              value: form.type,
+              onChange: (e) => setForm({ ...form, type: e.target.value }),
+              className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
+            }, ACTIVITY_TYPES.map((t) => /* @__PURE__ */ React.createElement("option", { key: t }, t)))
+          ),
+          /* @__PURE__ */ React.createElement("div", null,
+            /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Date"),
+            /* @__PURE__ */ React.createElement("input", {
+              type: "date",
+              value: form.date,
+              onChange: (e) => setForm({ ...form, date: e.target.value }),
+              className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
+            })
+          )
+        ),
+        /* @__PURE__ */ React.createElement("div", null,
+          /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Stakeholder"),
+          /* @__PURE__ */ React.createElement("input", {
+            type: "text",
+            value: form.stakeholder,
+            onChange: (e) => setForm({ ...form, stakeholder: e.target.value }),
+            placeholder: "Client contact name",
+            className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
+          })
+        ),
+        /* @__PURE__ */ React.createElement("div", null,
+          /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Notes"),
+          /* @__PURE__ */ React.createElement("textarea", {
+            value: form.notes,
+            onChange: (e) => setForm({ ...form, notes: e.target.value }),
+            placeholder: "What happened during this activity?",
+            rows: 2,
+            className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
+          })
+        ),
+        /* @__PURE__ */ React.createElement("div", null,
+          /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Next Steps"),
+          /* @__PURE__ */ React.createElement("input", {
+            type: "text",
+            value: form.nextSteps,
+            onChange: (e) => setForm({ ...form, nextSteps: e.target.value }),
+            placeholder: "What's the follow-up action?",
+            className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
+          })
+        ),
+        /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-2" },
+          /* @__PURE__ */ React.createElement("div", null,
+            /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Follow-Up Date"),
+            /* @__PURE__ */ React.createElement("input", {
+              type: "date",
+              value: form.followUpDate,
+              onChange: (e) => setForm({ ...form, followUpDate: e.target.value }),
+              className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
+            })
+          ),
+          /* @__PURE__ */ React.createElement("div", null,
+            /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Outcome"),
+            /* @__PURE__ */ React.createElement("select", {
+              value: form.outcome,
+              onChange: (e) => setForm({ ...form, outcome: e.target.value }),
+              className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
+            }, ACTIVITY_OUTCOMES.map((o) => /* @__PURE__ */ React.createElement("option", { key: o }, o)))
+          )
+        ),
+        /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" },
+          /* @__PURE__ */ React.createElement("button", {
+            onClick: handleAddActivity,
+            className: "btn-primary text-xs flex-1"
+          }, "Log Activity"),
+          /* @__PURE__ */ React.createElement("button", {
+            onClick: () => setShowForm(false),
+            className: "btn-secondary text-xs flex-1"
+          }, "Cancel")
+        )
+      ),
+      activities.length === 0 ? /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 text-center py-6" }, "No activities logged yet") : /* @__PURE__ */ React.createElement("div", { className: "space-y-2" }, activities.map((a) => /* @__PURE__ */ React.createElement(ActivityItem, { key: a.id, activity: a, onDelete: () => handleDeleteActivity(a.id) })))
+    );
+  }
+
   function OppMEDDICCSection({ opp, onUpdateOpp }) {
     const FIELDS = [
       { key: "metrics", label: "Metrics", icon: "\u{1F4CA}", desc: "What measurable outcome does this deal deliver for the client?" },
@@ -1125,9 +1322,12 @@ var _unused = (() => {
     const canEdit = client && canEditClient ? canEditClient(client.id) : globalCanEdit;
     const [editing, setEditing] = useState(false);
     const [form, setForm] = useState({ ...opp });
+    const [activeTab, setActiveTab] = useState("overview");
+    const currentUserEmail = "user@company.com";
     useEffect(() => {
       setForm({ ...opp });
       setEditing(false);
+      setActiveTab("overview");
     }, [opp.id]);
     const inp = (key, type = "text", placeholder = "") => /* @__PURE__ */ React.createElement(
       "input",
@@ -1144,19 +1344,234 @@ var _unused = (() => {
       onUpdateOpp({ ...form, lastUpdated: (/* @__PURE__ */ new Date()).toLocaleDateString() });
       setEditing(false);
     };
-    return /* @__PURE__ */ React.createElement("div", { className: "p-6 space-y-5" }, /* @__PURE__ */ React.createElement("button", { onClick: onBack, className: "text-sm font-semibold flex items-center gap-1", style: { color: "#2080BD" } }, "\u2190 ", backView === "allOpps" ? "Back to All Opportunities" : "Back to " + ((client == null ? void 0 : client.name) || "Client")), /* @__PURE__ */ React.createElement("div", { className: "card" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-start justify-between gap-4 flex-wrap" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 flex-wrap mb-2" }, /* @__PURE__ */ React.createElement("h1", { className: "text-2xl font-bold text-gray-900" }, opp.name), /* @__PURE__ */ React.createElement(PipelineBadge, { pipeline: opp.pipeline || "capillary" }), /* @__PURE__ */ React.createElement(StatusBadge, { status: opp.status })), /* @__PURE__ */ React.createElement("p", { className: "text-gray-500 text-sm" }, (client == null ? void 0 : client.name) || "\u2014", " \xB7 ", opp.category)), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, canEdit && (editing ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("button", { onClick: saveEdit, className: "btn-primary text-sm" }, "Save"), /* @__PURE__ */ React.createElement("button", { onClick: () => {
-      setForm({ ...opp });
-      setEditing(false);
-    }, className: "btn-secondary text-sm" }, "Cancel")) : /* @__PURE__ */ React.createElement("button", { onClick: () => setEditing(true), className: "btn-secondary text-sm" }, "\u270F\uFE0F Edit"))))), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-5" }, /* @__PURE__ */ React.createElement("div", { className: "card" }, /* @__PURE__ */ React.createElement("h3", { className: "font-semibold text-gray-700 text-sm mb-3" }, "Opportunity Details"), row("Value", fmt$(opp.value), inp("value", "number")), row(
-      "Status",
-      opp.status,
-      /* @__PURE__ */ React.createElement("select", { value: form.status || "", onChange: (e) => setForm({ ...form, status: e.target.value }), className: "text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 w-full focus:outline-none focus:ring-1 focus:ring-sky-500" }, STATUSES.map((s) => /* @__PURE__ */ React.createElement("option", { key: s }, s)))
-    ), row("Owner", opp.owner, inp("owner")), row("Category", opp.category, inp("category")), row("Revenue Type", opp.retainerType || "ARR", /* @__PURE__ */ React.createElement("select", { value: form.retainerType || "ARR", onChange: (e) => setForm({ ...form, retainerType: e.target.value }), className: "text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 w-full focus:outline-none focus:ring-1 focus:ring-sky-500" }, /* @__PURE__ */ React.createElement("option", { value: "ARR" }, "ARR (Recurring)"), /* @__PURE__ */ React.createElement("option", { value: "One Time" }, "One-Time"))), row("Target Qtr", opp.targetQtr, inp("targetQtr")), row("Fiscal Year", opp.fiscalYear || "FY27", editing ? /* @__PURE__ */ React.createElement("select", { value: form.fiscalYear || "FY27", onChange: (e) => setForm({ ...form, fiscalYear: e.target.value }), className: "text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 w-full focus:outline-none focus:ring-1 focus:ring-sky-500" }, ["FY25", "FY26", "FY27", "FY28"].map((y) => /* @__PURE__ */ React.createElement("option", { key: y }, y))) : null), row(
-      "Probability",
-      opp.probability || "\u2014",
-      /* @__PURE__ */ React.createElement("select", { value: form.probability || "", onChange: (e) => setForm({ ...form, probability: e.target.value }), className: "text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 w-full focus:outline-none focus:ring-1 focus:ring-sky-500" }, /* @__PURE__ */ React.createElement("option", { value: "" }, "\u2014 Select \u2014"), ["0%", "<25%", "25%", "50%", "75%", "100%"].map((p) => /* @__PURE__ */ React.createElement("option", { key: p }, p)))
-    ), row("Closing Fortnight", opp.closingFortnight, inp("closingFortnight")), row("Tag", opp.tag, inp("tag")), row("Last Updated", opp.lastUpdated)), /* @__PURE__ */ React.createElement("div", { className: "card space-y-4" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2" }, "Insights"), editing ? /* @__PURE__ */ React.createElement("textarea", { className: "text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 w-full", rows: 4, value: form.insights || "", onChange: (e) => setForm({ ...form, insights: e.target.value }) }) : /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-700 whitespace-pre-wrap" }, opp.insights || "\u2014")), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2" }, "Action Plan"), editing ? /* @__PURE__ */ React.createElement("textarea", { className: "text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 w-full", rows: 3, value: form.actionPlan || "", onChange: (e) => setForm({ ...form, actionPlan: e.target.value }) }) : /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-700 whitespace-pre-wrap" }, opp.actionPlan || "\u2014")), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2" }, "Support Needed"), editing ? /* @__PURE__ */ React.createElement("textarea", { className: "text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 w-full", rows: 2, value: form.supportNeeded || "", onChange: (e) => setForm({ ...form, supportNeeded: e.target.value }) }) : /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-700 whitespace-pre-wrap" }, opp.supportNeeded || "\u2014")))), /* @__PURE__ */ React.createElement(OppMEDDICCSection, { opp, onUpdateOpp }));
+    const tabs = [
+      { id: "overview", label: "Overview" },
+      { id: "activities", label: "Activities" },
+      { id: "meddicc", label: "MEDDICC" }
+    ];
+    return /* @__PURE__ */ React.createElement("div", { className: "p-6 space-y-5" },
+      /* @__PURE__ */ React.createElement("button", { onClick: onBack, className: "text-sm font-semibold flex items-center gap-1", style: { color: "#2080BD" } }, "\u2190 ", backView === "allOpps" ? "Back to All Opportunities" : "Back to " + ((client == null ? void 0 : client.name) || "Client")),
+      /* @__PURE__ */ React.createElement("div", { className: "card" },
+        /* @__PURE__ */ React.createElement("div", { className: "flex items-start justify-between gap-4 flex-wrap" },
+          /* @__PURE__ */ React.createElement("div", null,
+            /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 flex-wrap mb-2" },
+              /* @__PURE__ */ React.createElement("h1", { className: "text-2xl font-bold text-gray-900" }, opp.name),
+              /* @__PURE__ */ React.createElement(PipelineBadge, { pipeline: opp.pipeline || "capillary" }),
+              /* @__PURE__ */ React.createElement(StatusBadge, { status: opp.status })
+            ),
+            /* @__PURE__ */ React.createElement("p", { className: "text-gray-500 text-sm" }, (client == null ? void 0 : client.name) || "\u2014", " \xB7 ", opp.category)
+          ),
+          /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" },
+            canEdit && (editing ? /* @__PURE__ */ React.createElement(React.Fragment, null,
+              /* @__PURE__ */ React.createElement("button", { onClick: saveEdit, className: "btn-primary text-sm" }, "Save"),
+              /* @__PURE__ */ React.createElement("button", { onClick: () => { setForm({ ...opp }); setEditing(false); }, className: "btn-secondary text-sm" }, "Cancel")
+            ) : /* @__PURE__ */ React.createElement("button", { onClick: () => setEditing(true), className: "btn-secondary text-sm" }, "\u270F\uFE0F Edit"))
+          )
+        ),
+        /* @__PURE__ */ React.createElement("div", { className: "border-b border-gray-100 pt-4" },
+          /* @__PURE__ */ React.createElement("div", { className: "flex gap-4" },
+            tabs.map((t) => /* @__PURE__ */ React.createElement("button", {
+              key: t.id,
+              onClick: () => setActiveTab(t.id),
+              className: `px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === t.id ? "border-blue-500 text-sky-700" : "border-transparent text-gray-500 hover:text-gray-700"}`
+            }, t.label))
+          )
+        )
+      ),
+      activeTab === "overview" && /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-5" },
+        /* @__PURE__ */ React.createElement("div", { className: "card" },
+          /* @__PURE__ */ React.createElement("h3", { className: "font-semibold text-gray-700 text-sm mb-3" }, "Opportunity Details"),
+          row("Value", fmt$(opp.value), inp("value", "number")),
+          row("Status", opp.status, /* @__PURE__ */ React.createElement("select", { value: form.status || "", onChange: (e) => setForm({ ...form, status: e.target.value }), className: "text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 w-full focus:outline-none focus:ring-1 focus:ring-sky-500" }, STATUSES.map((s) => /* @__PURE__ */ React.createElement("option", { key: s }, s)))),
+          row("Owner", opp.owner, inp("owner")),
+          row("Category", opp.category, inp("category")),
+          row("Revenue Type", opp.retainerType || "ARR", /* @__PURE__ */ React.createElement("select", { value: form.retainerType || "ARR", onChange: (e) => setForm({ ...form, retainerType: e.target.value }), className: "text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 w-full focus:outline-none focus:ring-1 focus:ring-sky-500" }, /* @__PURE__ */ React.createElement("option", { value: "ARR" }, "ARR (Recurring)"), /* @__PURE__ */ React.createElement("option", { value: "One Time" }, "One-Time"))),
+          row("Target Qtr", opp.targetQtr, inp("targetQtr")),
+          row("Fiscal Year", opp.fiscalYear || "FY27", editing ? /* @__PURE__ */ React.createElement("select", { value: form.fiscalYear || "FY27", onChange: (e) => setForm({ ...form, fiscalYear: e.target.value }), className: "text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 w-full focus:outline-none focus:ring-1 focus:ring-sky-500" }, ["FY25", "FY26", "FY27", "FY28"].map((y) => /* @__PURE__ */ React.createElement("option", { key: y }, y))) : null),
+          row("Probability", opp.probability || "\u2014", /* @__PURE__ */ React.createElement("select", { value: form.probability || "", onChange: (e) => setForm({ ...form, probability: e.target.value }), className: "text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 w-full focus:outline-none focus:ring-1 focus:ring-sky-500" }, /* @__PURE__ */ React.createElement("option", { value: "" }, "\u2014 Select \u2014"), ["0%", "<25%", "25%", "50%", "75%", "100%"].map((p) => /* @__PURE__ */ React.createElement("option", { key: p }, p)))),
+          row("Closing Fortnight", opp.closingFortnight, inp("closingFortnight")),
+          row("Tag", opp.tag, inp("tag")),
+          row("Last Updated", opp.lastUpdated)
+        ),
+        /* @__PURE__ */ React.createElement("div", { className: "card space-y-4" },
+          /* @__PURE__ */ React.createElement("div", null,
+            /* @__PURE__ */ React.createElement("div", { className: "text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2" }, "Insights"),
+            editing ? /* @__PURE__ */ React.createElement("textarea", { className: "text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 w-full", rows: 4, value: form.insights || "", onChange: (e) => setForm({ ...form, insights: e.target.value }) }) : /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-700 whitespace-pre-wrap" }, opp.insights || "\u2014")
+          ),
+          /* @__PURE__ */ React.createElement("div", null,
+            /* @__PURE__ */ React.createElement("div", { className: "text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2" }, "Action Plan"),
+            editing ? /* @__PURE__ */ React.createElement("textarea", { className: "text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 w-full", rows: 3, value: form.actionPlan || "", onChange: (e) => setForm({ ...form, actionPlan: e.target.value }) }) : /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-700 whitespace-pre-wrap" }, opp.actionPlan || "\u2014")
+          ),
+          /* @__PURE__ */ React.createElement("div", null,
+            /* @__PURE__ */ React.createElement("div", { className: "text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2" }, "Support Needed"),
+            editing ? /* @__PURE__ */ React.createElement("textarea", { className: "text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 w-full", rows: 2, value: form.supportNeeded || "", onChange: (e) => setForm({ ...form, supportNeeded: e.target.value }) }) : /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-700 whitespace-pre-wrap" }, opp.supportNeeded || "\u2014")
+          )
+        )
+      ),
+      activeTab === "activities" && /* @__PURE__ */ React.createElement(ActivitiesSection, { opp, onUpdateOpp, canEdit, currentUserEmail }),
+      activeTab === "meddicc" && /* @__PURE__ */ React.createElement(OppMEDDICCSection, { opp, onUpdateOpp })
+    );
   }
+  function ActivityBoard({ lead, clients, opps }) {
+    const [dateFilter, setDateFilter] = React.useState("30");
+    const [clientFilter, setClientFilter] = React.useState("all");
+    const [typeFilter, setTypeFilter] = React.useState("all");
+
+    const clientIds = new Set(lead.clients.map((c) => c.id));
+    const leadOpps = opps.filter((o) => clientIds.has(o.clientId));
+
+    // Collect all activities
+    const allActivities = [];
+    leadOpps.forEach((opp) => {
+      const client = clients.find((c) => c.id === opp.clientId);
+      (opp.activities || []).forEach((activity) => {
+        allActivities.push({ ...activity, opp, client });
+      });
+    });
+
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const daysFilter = parseInt(dateFilter);
+    const cutoffDate = new Date(now);
+    cutoffDate.setDate(cutoffDate.getDate() - daysFilter);
+
+    // Filter activities
+    const filtered = allActivities
+      .filter((a) => !a.date || new Date(a.date + "T00:00:00") >= cutoffDate)
+      .filter((a) => clientFilter === "all" || a.client?.id === clientFilter)
+      .filter((a) => typeFilter === "all" || a.type === typeFilter)
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Summary stats
+    const thisMonth = allActivities.filter((a) => {
+      const d = new Date(a.date + "T00:00:00");
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    });
+
+    const overdue = leadOpps.flatMap((opp) => {
+      const lastActivity = (opp.activities || []).length > 0 ? (opp.activities || []).sort((a, b) => new Date(b.date) - new Date(a.date))[0] : null;
+      return (opp.activities || []).filter((a) => a.followUpDate && new Date(a.followUpDate + "T00:00:00") < now && (!lastActivity || lastActivity.id !== a.id || !lastActivity.followUpDate));
+    });
+
+    return /* @__PURE__ */ React.createElement("div", { className: "space-y-5" },
+      /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-4 gap-4" },
+        /* @__PURE__ */ React.createElement("div", { className: "bg-blue-50 rounded-xl p-4 text-center" },
+          /* @__PURE__ */ React.createElement("div", { className: "text-2xl font-bold", style: { color: "#2080BD" } }, thisMonth.length),
+          /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mt-1" }, "Activities (this month)")
+        ),
+        /* @__PURE__ */ React.createElement("div", { className: "bg-red-50 rounded-xl p-4 text-center" },
+          /* @__PURE__ */ React.createElement("div", { className: "text-2xl font-bold text-red-600" }, overdue.length),
+          /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mt-1" }, "Overdue follow-ups")
+        ),
+        /* @__PURE__ */ React.createElement("div", { className: "bg-purple-50 rounded-xl p-4 text-center" },
+          /* @__PURE__ */ React.createElement("div", { className: "text-2xl font-bold text-purple-600" }, leadOpps.length > 0 ? Math.round(allActivities.length / leadOpps.length) : 0),
+          /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mt-1" }, "Avg per opp")
+        ),
+        /* @__PURE__ */ React.createElement("div", { className: "bg-green-50 rounded-xl p-4 text-center" },
+          /* @__PURE__ */ React.createElement("div", { className: "text-2xl font-bold text-green-600" }, allActivities.length > 0 ? Math.floor((now - new Date(allActivities[0].date + "T00:00:00")) / (1000 * 60 * 60 * 24)) : "—"),
+          /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mt-1" }, "Days since last activity")
+        )
+      ),
+      /* @__PURE__ */ React.createElement("div", { className: "card" },
+        /* @__PURE__ */ React.createElement("h3", { className: "font-semibold text-gray-700 mb-3" }, "Filters"),
+        /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-4 gap-3" },
+          /* @__PURE__ */ React.createElement("div", null,
+            /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Date Range"),
+            /* @__PURE__ */ React.createElement("select", {
+              value: dateFilter,
+              onChange: (e) => setDateFilter(e.target.value),
+              className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
+            }, /* @__PURE__ */ React.createElement("option", { value: "7" }, "Last 7 days"), /* @__PURE__ */ React.createElement("option", { value: "30" }, "Last 30 days"), /* @__PURE__ */ React.createElement("option", { value: "90" }, "Last 90 days"), /* @__PURE__ */ React.createElement("option", { value: "999999" }, "All time"))
+          ),
+          /* @__PURE__ */ React.createElement("div", null,
+            /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Client"),
+            /* @__PURE__ */ React.createElement("select", {
+              value: clientFilter,
+              onChange: (e) => setClientFilter(e.target.value),
+              className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
+            }, /* @__PURE__ */ React.createElement("option", { value: "all" }, "All clients"), lead.clients.map((c) => /* @__PURE__ */ React.createElement("option", { key: c.id, value: c.id }, c.name)))
+          ),
+          /* @__PURE__ */ React.createElement("div", null,
+            /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Type"),
+            /* @__PURE__ */ React.createElement("select", {
+              value: typeFilter,
+              onChange: (e) => setTypeFilter(e.target.value),
+              className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
+            }, /* @__PURE__ */ React.createElement("option", { value: "all" }, "All types"), ACTIVITY_TYPES.map((t) => /* @__PURE__ */ React.createElement("option", { key: t, value: t }, t)))
+          ),
+          /* @__PURE__ */ React.createElement("div", null,
+            /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, " "),
+            /* @__PURE__ */ React.createElement("button", {
+              onClick: () => { setDateFilter("30"); setClientFilter("all"); setTypeFilter("all"); },
+              className: "btn-secondary text-xs w-full"
+            }, "Reset")
+          )
+        )
+      ),
+      overdue.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "card" },
+        /* @__PURE__ */ React.createElement("h3", { className: "font-semibold text-gray-700 mb-3 flex items-center gap-2" }, /* @__PURE__ */ React.createElement("span", { style: { color: "#ef4444", fontSize: "18px" } }, "\u26A0\uFE0F"), "Overdue Follow-Ups"),
+        /* @__PURE__ */ React.createElement("div", { className: "space-y-2" },
+          overdue.slice(0, 5).map((a, i) => {
+            const opp = leadOpps.find((o) => o.id === a.id);
+            const daysOverdue = Math.floor((now - new Date(a.followUpDate + "T00:00:00")) / (1000 * 60 * 60 * 24));
+            return /* @__PURE__ */ React.createElement("div", { key: i, className: "p-3 border-l-4 border-red-500 bg-red-50 rounded-lg" },
+              /* @__PURE__ */ React.createElement("div", { className: "text-xs font-semibold text-gray-800" }, a.client?.name || "—"),
+              /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-600 mt-0.5" }, a.opp?.name || "—"),
+              /* @__PURE__ */ React.createElement("div", { className: "text-xs text-red-600 font-semibold mt-1" }, daysOverdue, " days overdue"),
+              a.notes && /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-600 mt-1" }, a.notes)
+            );
+          })
+        )
+      ),
+      /* @__PURE__ */ React.createElement("div", { className: "card" },
+        /* @__PURE__ */ React.createElement("h3", { className: "font-semibold text-gray-700 mb-3" }, "Activity Timeline"),
+        filtered.length === 0 ? /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 text-center py-6" }, "No activities found") : /* @__PURE__ */ React.createElement("div", { className: "space-y-2" },
+          filtered.map((a) => /* @__PURE__ */ React.createElement("div", { key: a.id, className: "border border-gray-100 rounded-lg p-3 hover:bg-gray-50 transition-colors" },
+            /* @__PURE__ */ React.createElement("div", { className: "flex items-start justify-between gap-3 mb-2" },
+              /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" },
+                /* @__PURE__ */ React.createElement(ActivityBadge, { type: a.type, compact: false })
+              ),
+              /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400" }, a.date ? new Date(a.date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" }) : "—")
+            ),
+            /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-600 mb-1" },
+              /* @__PURE__ */ React.createElement("strong", null, a.client?.name || "—"),
+              " / ",
+              /* @__PURE__ */ React.createElement("strong", null, a.opp?.name || "—")
+            ),
+            /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-600 mb-1" },
+              /* @__PURE__ */ React.createElement("strong", null, a.who || "Unknown"),
+              " with ",
+              a.stakeholder ? a.stakeholder : /* @__PURE__ */ React.createElement("span", { className: "text-gray-400" }, "—")
+            ),
+            a.notes && /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-700 mb-1" }, a.notes),
+            a.nextSteps && /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-600 mb-1 p-1.5 bg-blue-50 rounded border-l-2 border-blue-300" },
+              /* @__PURE__ */ React.createElement("strong", null, "Next: "),
+              a.nextSteps
+            ),
+            (a.followUpDate || a.outcome) && /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mt-1" },
+              a.followUpDate && /* @__PURE__ */ React.createElement("span", {
+                className: "text-xs px-1.5 py-0.5 rounded-md font-semibold",
+                style: {
+                  background: new Date(a.followUpDate + "T00:00:00") < now ? "#fee2e2" : "#f0fdf4",
+                  color: new Date(a.followUpDate + "T00:00:00") < now ? "#991b1b" : "#166534",
+                  border: new Date(a.followUpDate + "T00:00:00") < now ? "1px solid #fca5a5" : "1px solid #86efac"
+                }
+              }, new Date(a.followUpDate + "T00:00:00") < now ? "OVERDUE" : "Follow-up", ": ", new Date(a.followUpDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })),
+              a.outcome && /* @__PURE__ */ React.createElement("span", {
+                className: "text-xs px-1.5 py-0.5 rounded-md font-semibold",
+                style: {
+                  background: a.outcome === "Positive" ? "#dcfce7" : a.outcome === "Neutral" ? "#f3f4f6" : "#fee2e2",
+                  color: a.outcome === "Positive" ? "#15803d" : a.outcome === "Neutral" ? "#374151" : "#991b1b",
+                  border: a.outcome === "Positive" ? "1px solid #bbf7d0" : a.outcome === "Neutral" ? "1px solid #d1d5db" : "1px solid #fca5a5"
+                }
+              }, a.outcome)
+            )
+          ))
+        )
+      )
+    );
+  }
+
   function AccountLeadView({ clients, opps, onSelectClient }) {
     const activeClients = clients.filter((c) => !c.archived);
     const leads = useMemo(() => {
@@ -1181,9 +1596,10 @@ var _unused = (() => {
     }, [activeClients, opps]);
     const [selectedLead, setSelectedLead] = useState(null);
     const [winsFY, setWinsFY] = useState("FY27");
+    const [leadActiveTab, setLeadActiveTab] = useState("overview");
     const lead = leads.find((l) => l.name === selectedLead);
     if (selectedLead && lead) {
-      return /* @__PURE__ */ React.createElement("div", { className: "p-6 space-y-5" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setSelectedLead(null), className: "text-sm font-semibold flex items-center gap-1", style: { color: "#2080BD" } }, "\u2190 All Account Leads"), /* @__PURE__ */ React.createElement("div", { className: "card" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-4" }, /* @__PURE__ */ React.createElement("div", { className: "w-14 h-14 rounded-2xl flex items-center justify-center text-white text-xl font-bold", style: { background: "linear-gradient(135deg,#2080BD,#4fa3d1)" } }, lead.name[0]), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("h1", { className: "text-2xl font-bold text-gray-900" }, lead.name), /* @__PURE__ */ React.createElement("p", { className: "text-gray-500 text-sm" }, lead.clients.length, " clients \xB7 Account Lead"))), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-5 gap-4 mt-5" }, /* @__PURE__ */ React.createElement("div", { className: "bg-blue-50 rounded-xl p-3 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "text-xl font-bold", style: { color: "#2080BD" } }, lead.clients.length), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mt-0.5" }, "Clients")), /* @__PURE__ */ React.createElement("div", { className: "bg-green-50 rounded-xl p-3 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "text-xl font-bold text-green-600" }, lead.green), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mt-0.5" }, "Green")), /* @__PURE__ */ React.createElement("div", { className: "bg-yellow-50 rounded-xl p-3 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "text-xl font-bold text-yellow-600" }, lead.yellow), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mt-0.5" }, "Yellow")), /* @__PURE__ */ React.createElement("div", { className: "bg-red-50 rounded-xl p-3 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "text-xl font-bold text-red-600" }, lead.red), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mt-0.5" }, "Red")), /* @__PURE__ */ React.createElement("div", { className: "bg-gray-50 rounded-xl p-3 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "text-xl font-bold text-gray-500" }, lead.activeOpps), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mt-0.5" }, "Active Opps")))), (() => {
+      return /* @__PURE__ */ React.createElement("div", { className: "p-6 space-y-5" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setSelectedLead(null), className: "text-sm font-semibold flex items-center gap-1", style: { color: "#2080BD" } }, "\u2190 All Account Leads"), /* @__PURE__ */ React.createElement("div", { className: "card" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-4" }, /* @__PURE__ */ React.createElement("div", { className: "w-14 h-14 rounded-2xl flex items-center justify-center text-white text-xl font-bold", style: { background: "linear-gradient(135deg,#2080BD,#4fa3d1)" } }, lead.name[0]), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("h1", { className: "text-2xl font-bold text-gray-900" }, lead.name), /* @__PURE__ */ React.createElement("p", { className: "text-gray-500 text-sm" }, lead.clients.length, " clients \xB7 Account Lead"))), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-5 gap-4 mt-5" }, /* @__PURE__ */ React.createElement("div", { className: "bg-blue-50 rounded-xl p-3 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "text-xl font-bold", style: { color: "#2080BD" } }, lead.clients.length), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mt-0.5" }, "Clients")), /* @__PURE__ */ React.createElement("div", { className: "bg-green-50 rounded-xl p-3 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "text-xl font-bold text-green-600" }, lead.green), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mt-0.5" }, "Green")), /* @__PURE__ */ React.createElement("div", { className: "bg-yellow-50 rounded-xl p-3 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "text-xl font-bold text-yellow-600" }, lead.yellow), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mt-0.5" }, "Yellow")), /* @__PURE__ */ React.createElement("div", { className: "bg-red-50 rounded-xl p-3 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "text-xl font-bold text-red-600" }, lead.red), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mt-0.5" }, "Red")), /* @__PURE__ */ React.createElement("div", { className: "bg-gray-50 rounded-xl p-3 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "text-xl font-bold text-gray-500" }, lead.activeOpps), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mt-0.5" }, "Active Opps"))), /* @__PURE__ */ React.createElement("div", { className: "border-b border-gray-100" }, /* @__PURE__ */ React.createElement("div", { className: "flex gap-4" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setLeadActiveTab("overview"), className: `px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${leadActiveTab === "overview" ? "border-blue-500 text-sky-700" : "border-transparent text-gray-500 hover:text-gray-700"}` }, "Overview"), /* @__PURE__ */ React.createElement("button", { onClick: () => setLeadActiveTab("activities"), className: `px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${leadActiveTab === "activities" ? "border-blue-500 text-sky-700" : "border-transparent text-gray-500 hover:text-gray-700"}` }, "Activity Board"), /* @__PURE__ */ React.createElement("button", { onClick: () => setLeadActiveTab("portfolio"), className: `px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${leadActiveTab === "portfolio" ? "border-blue-500 text-sky-700" : "border-transparent text-gray-500 hover:text-gray-700"}` }, "Client Portfolio"))), leadActiveTab === "overview" && (() => {
         const clientIds = new Set(lead.clients.map((c) => c.id));
         const leadOpps = opps.filter((o) => clientIds.has(o.clientId));
         const activeLeadOpps = leadOpps.filter((o) => !["Closed-Won", "Closed-Lost"].includes(o.status)).sort((a, b) => (b.value || 0) - (a.value || 0));
@@ -1210,13 +1626,13 @@ var _unused = (() => {
             return /* @__PURE__ */ React.createElement("div", { key: o.id, className: "flex items-start gap-2 p-2 rounded-lg hover:bg-green-50 cursor-pointer transition-colors", onClick: () => onSelectClient(o.clientId) }, /* @__PURE__ */ React.createElement("span", { className: "text-green-500 text-sm mt-0.5 shrink-0" }, "\u2713"), /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" }, /* @__PURE__ */ React.createElement("div", { className: "text-xs font-semibold text-gray-800 leading-snug", style: { wordBreak: "break-word" } }, o.name), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400" }, (cl == null ? void 0 : cl.name) || "\u2014")), o.value > 0 && /* @__PURE__ */ React.createElement("div", { className: "text-xs font-bold text-green-600 shrink-0" }, fmt$(o.value)));
           })));
         })());
-      })(), /* @__PURE__ */ React.createElement("div", { className: "card" }, /* @__PURE__ */ React.createElement("h3", { className: "font-semibold text-gray-700 mb-3" }, "Client Portfolio"), /* @__PURE__ */ React.createElement("table", { className: "w-full text-sm" }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", { className: "border-b border-gray-100" }, /* @__PURE__ */ React.createElement("th", { className: "text-left py-2 px-3 text-xs font-semibold text-gray-500" }, "Client"), /* @__PURE__ */ React.createElement("th", { className: "text-left py-2 px-3 text-xs font-semibold text-gray-500" }, "Platform"), /* @__PURE__ */ React.createElement("th", { className: "text-left py-2 px-3 text-xs font-semibold text-gray-500" }, "ARR/AOP"), HEALTH_MONTHS.map((m) => /* @__PURE__ */ React.createElement("th", { key: m, className: "text-center py-2 px-2 text-xs font-semibold text-gray-500" }, MONTH_LABELS[m])), /* @__PURE__ */ React.createElement("th", { className: "text-left py-2 px-3 text-xs font-semibold text-gray-500" }, "NPS"), /* @__PURE__ */ React.createElement("th", { className: "text-left py-2 px-3 text-xs font-semibold text-gray-500" }, "Opps"))), /* @__PURE__ */ React.createElement("tbody", null, lead.clients.map((c) => {
+      })(), leadActiveTab === "portfolio" && /* @__PURE__ */ React.createElement("div", { className: "card" }, /* @__PURE__ */ React.createElement("h3", { className: "font-semibold text-gray-700 mb-3" }, "Client Portfolio"), /* @__PURE__ */ React.createElement("table", { className: "w-full text-sm" }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", { className: "border-b border-gray-100" }, /* @__PURE__ */ React.createElement("th", { className: "text-left py-2 px-3 text-xs font-semibold text-gray-500" }, "Client"), /* @__PURE__ */ React.createElement("th", { className: "text-left py-2 px-3 text-xs font-semibold text-gray-500" }, "Platform"), /* @__PURE__ */ React.createElement("th", { className: "text-left py-2 px-3 text-xs font-semibold text-gray-500" }, "ARR/AOP"), HEALTH_MONTHS.map((m) => /* @__PURE__ */ React.createElement("th", { key: m, className: "text-center py-2 px-2 text-xs font-semibold text-gray-500" }, MONTH_LABELS[m])), /* @__PURE__ */ React.createElement("th", { className: "text-left py-2 px-3 text-xs font-semibold text-gray-500" }, "NPS"), /* @__PURE__ */ React.createElement("th", { className: "text-left py-2 px-3 text-xs font-semibold text-gray-500" }, "Opps"))), /* @__PURE__ */ React.createElement("tbody", null, lead.clients.map((c) => {
         const cOpps = opps.filter((o) => o.clientId === c.id && !["Closed-Won", "Closed-Lost"].includes(o.status));
         return /* @__PURE__ */ React.createElement("tr", { key: c.id, className: "border-b border-gray-50 hover:bg-blue-50 cursor-pointer", onClick: () => onSelectClient(c.id) }, /* @__PURE__ */ React.createElement("td", { className: "py-2.5 px-3 font-semibold text-gray-800" }, c.name), /* @__PURE__ */ React.createElement("td", { className: "py-2.5 px-3" }, /* @__PURE__ */ React.createElement(PlatformBadge, { platform: c.platform })), /* @__PURE__ */ React.createElement("td", { className: "py-2.5 px-3 font-medium" }, c.platform === "inspire" ? fmt$(c.arr) : fmt$(c.aop)), HEALTH_MONTHS.map((m) => {
           var _a;
           return /* @__PURE__ */ React.createElement("td", { key: m, className: "py-2.5 px-2 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "flex justify-center" }, /* @__PURE__ */ React.createElement(HealthDot, { health: ((_a = c.healthHistory) == null ? void 0 : _a[m]) || null, size: 20 })));
         }), /* @__PURE__ */ React.createElement("td", { className: "py-2.5 px-3" }, c.nps != null ? /* @__PURE__ */ React.createElement("span", { className: `font-bold ${c.nps >= 50 ? "text-green-600" : c.nps >= 0 ? "text-yellow-600" : "text-red-600"}` }, c.nps) : "\u2014"), /* @__PURE__ */ React.createElement("td", { className: "py-2.5 px-3 text-gray-500" }, cOpps.length));
-      })))));
+      })))), leadActiveTab === "activities" && /* @__PURE__ */ React.createElement(ActivityBoard, { lead, clients, opps })));
     }
     return /* @__PURE__ */ React.createElement("div", { className: "p-6 space-y-5" }, /* @__PURE__ */ React.createElement("h1", { className: "text-xl font-bold text-gray-900" }, "Account Leads"), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-4" }, leads.map((lead2) => {
       const avgNPS = lead2.npsScores.length ? Math.round(lead2.npsScores.reduce((a, b) => a + b, 0) / lead2.npsScores.length) : null;
@@ -2030,7 +2446,7 @@ var _unused = (() => {
         style: platformFilter === p ? { background: "#2080BD" } : {}
       },
       p === "all" ? "All" : p === "inspire" ? "\u2726 Inspire" : "\u25C8 Capillary"
-    ))), canEdit && /* @__PURE__ */ React.createElement("button", { onClick: () => setShowAddNPS(true), className: "btn-primary text-sm flex items-center gap-1.5 shrink-0" }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16, lineHeight: 1 } }, "\uFF0B"), " Add NPS Score"))), (() => {
+    ))), isNPSEditor && /* @__PURE__ */ React.createElement("button", { onClick: () => setShowAddNPS(true), className: "btn-primary text-sm flex items-center gap-1.5 shrink-0" }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16, lineHeight: 1 } }, "\uFF0B"), " Add NPS Score"))), (() => {
       const openCount = activeClients.reduce((n, c) => {
         const npi = c.npsIntelligence;
         if (!npi || !npi.reviews) return n;
