@@ -2032,8 +2032,9 @@ var _unused = (() => {
       p === "all" ? "All" : p === "inspire" ? "\u2726 Inspire" : "\u25C8 Capillary"
     ))), canEdit && /* @__PURE__ */ React.createElement("button", { onClick: () => setShowAddNPS(true), className: "btn-primary text-sm flex items-center gap-1.5 shrink-0" }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16, lineHeight: 1 } }, "\uFF0B"), " Add NPS Score"))), (() => {
       const openCount = activeClients.reduce((n, c) => {
-        if (!c.npsActions) return n;
-        return n + Object.values(c.npsActions).flat().filter((a) => !a.completed).length;
+        const npi = c.npsIntelligence;
+        if (!npi || !npi.reviews) return n;
+        return n + npi.reviews.reduce((s, r) => s + (r.items || []).filter(it => it.status !== 'done').length, 0);
       }, 0);
       return /* @__PURE__ */ React.createElement("div", { className: "flex gap-1 border-b border-gray-100 -mt-1 pb-0" }, [["scores", "\u{1F4CA} Scores"], ["prediction", "\u{1F52E} NPS Prediction"], ["plans", "\u2705 Action Plans"]].map(([k, l]) => /* @__PURE__ */ React.createElement(
         "button",
@@ -3561,9 +3562,9 @@ var _unused = (() => {
         return { ...u, assigned_accounts: next };
       }));
     };
-    const ROLE_LABELS = { admin: "Admin", account_lead: "Account Lead", viewer: "Viewer" };
-    const ROLE_COLORS = { admin: "#7c3aed", account_lead: "#2080BD", viewer: "#64748b" };
-    const ROLE_BG = { admin: "#f5f3ff", account_lead: "#e0f0ff", viewer: "#f1f5f9" };
+    const ROLE_LABELS = { admin: "Admin", pm: "PM", account_lead: "Account Lead", viewer: "Viewer" };
+    const ROLE_COLORS = { admin: "#7c3aed", pm: "#0891b2", account_lead: "#2080BD", viewer: "#64748b" };
+    const ROLE_BG = { admin: "#f5f3ff", pm: "#ecfeff", account_lead: "#e0f0ff", viewer: "#f1f5f9" };
     return /* @__PURE__ */ React.createElement("div", { className: "p-6 space-y-5" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("h1", { className: "text-xl font-bold text-gray-900" }, "User Management"), /* @__PURE__ */ React.createElement("p", { className: "text-gray-400 text-sm mt-0.5" }, "Control who can view or edit the CS Hub")), /* @__PURE__ */ React.createElement("div", { className: "flex gap-1 bg-gray-100 rounded-xl p-1" }, [["users", "\u{1F465} Users"], ["audit", "Audit Log"]].map(([tab, label]) => /* @__PURE__ */ React.createElement(
       "button",
       {
@@ -3573,8 +3574,9 @@ var _unused = (() => {
         style: { background: activeTab === tab ? "#fff" : "transparent", color: activeTab === tab ? "#1e293b" : "#64748b", boxShadow: activeTab === tab ? "0 1px 3px rgba(0,0,0,0.1)" : "none" }
       },
       label
-    )))), activeTab === "users" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-3 gap-3" }, [
+    )))), activeTab === "users" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-4 gap-3" }, [
       { role: "admin", desc: "Full access \u2014 manage users, edit all data, export, farming goals" },
+      { role: "pm", desc: "NPS Prediction editor \u2014 score accounts, manage reviews, export data" },
       { role: "account_lead", desc: "Edit assigned accounts only \u2014 read-only on others, no export" },
       { role: "viewer", desc: "View-only \u2014 no editing, no imports, no exports" }
     ].map(({ role, desc }) => /* @__PURE__ */ React.createElement("div", { key: role, className: "card", style: { borderLeft: `4px solid ${ROLE_COLORS[role]}`, marginBottom: 0 } }, /* @__PURE__ */ React.createElement("div", { className: "font-semibold text-sm", style: { color: ROLE_COLORS[role] } }, ROLE_LABELS[role]), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 mt-1" }, desc)))), /* @__PURE__ */ React.createElement("div", { className: "card p-0 overflow-hidden" }, /* @__PURE__ */ React.createElement("div", { className: "px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between" }, /* @__PURE__ */ React.createElement("span", { className: "text-xs font-semibold text-gray-500 uppercase tracking-wide" }, "Users (", users.length, ")"), msg && /* @__PURE__ */ React.createElement("span", { className: "text-xs font-semibold text-green-600" }, msg)), loading ? /* @__PURE__ */ React.createElement("div", { className: "py-8 text-center text-sm text-gray-400" }, "Loading\u2026") : /* @__PURE__ */ React.createElement("table", { className: "w-full text-sm" }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("th", { className: "text-left py-2.5 px-4" }, "Name / Email"), /* @__PURE__ */ React.createElement("th", { className: "text-left py-2.5 px-4" }, "Role"), /* @__PURE__ */ React.createElement("th", { className: "text-left py-2.5 px-4" }, "Assigned Accounts"), /* @__PURE__ */ React.createElement("th", { className: "text-left py-2.5 px-4" }, "Added"), /* @__PURE__ */ React.createElement("th", { className: "py-2.5 px-4" }))), /* @__PURE__ */ React.createElement("tbody", null, users.map((u) => /* @__PURE__ */ React.createElement("tr", { key: u.id, className: "border-t border-gray-50 hover:bg-gray-50" }, /* @__PURE__ */ React.createElement("td", { className: "py-3 px-4" }, /* @__PURE__ */ React.createElement("div", { className: "font-medium text-gray-800" }, u.display_name || "\u2014"), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400" }, u.email), u.email === currentUserEmail && /* @__PURE__ */ React.createElement("span", { className: "text-xs text-sky-600 font-semibold" }, "You")), /* @__PURE__ */ React.createElement("td", { className: "py-3 px-4" }, u.email === currentUserEmail ? /* @__PURE__ */ React.createElement("span", { className: "text-xs font-bold px-2 py-1 rounded-lg", style: { background: ROLE_BG[u.role], color: ROLE_COLORS[u.role] } }, ROLE_LABELS[u.role]) : /* @__PURE__ */ React.createElement(
@@ -3586,10 +3588,11 @@ var _unused = (() => {
         style: { color: ROLE_COLORS[u.role] }
       },
       /* @__PURE__ */ React.createElement("option", { value: "admin" }, "Admin"),
+      /* @__PURE__ */ React.createElement("option", { value: "pm" }, "PM"),
       /* @__PURE__ */ React.createElement("option", { value: "account_lead" }, "Account Lead"),
       /* @__PURE__ */ React.createElement("option", { value: "viewer" }, "Viewer")
     )), /* @__PURE__ */ React.createElement("td", { className: "py-3 px-4" },
-        u.role === "account_lead" ? React.createElement("div", { className: "flex flex-wrap gap-1 items-center" },
+        (u.role === "account_lead" || u.role === "pm") ? React.createElement("div", { className: "flex flex-wrap gap-1 items-center" },
           (u.assigned_accounts || []).map(function(aid) {
             var cl = allClients.find(function(c) { return c.id === aid; });
             return cl ? React.createElement("span", { key: aid, className: "inline-flex items-center gap-1 px-2 py-0.5 bg-sky-50 text-sky-700 text-xs rounded-full font-medium border border-sky-100" }, cl.name, editingAccounts === u.id && React.createElement("button", { onClick: function() { toggleAccount(u.id, aid); }, className: "text-sky-400 hover:text-red-500 ml-0.5" }, "\u2715")) : null;
@@ -3638,6 +3641,7 @@ var _unused = (() => {
       },
       /* @__PURE__ */ React.createElement("option", { value: "viewer" }, "Viewer"),
       /* @__PURE__ */ React.createElement("option", { value: "account_lead" }, "Account Lead"),
+      /* @__PURE__ */ React.createElement("option", { value: "pm" }, "PM"),
       /* @__PURE__ */ React.createElement("option", { value: "admin" }, "Admin")
     ))), /* @__PURE__ */ React.createElement("button", { onClick: addUser, disabled: saving || !newEmail.trim(), className: "btn-primary text-sm px-5 py-2" }, saving ? "Adding\u2026" : "+ Add User"), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-400 mt-2" }, "Users are granted access by email \u2014 they must sign in with the matching Google account.")), activeTab === "audit" && React.createElement(React.Fragment, null,
       React.createElement("div", { className: "card" },
