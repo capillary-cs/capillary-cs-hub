@@ -314,7 +314,7 @@ var _unused = (() => {
      fields:[{k:'rules',lbl:'Program Rules',opts:['More Gaps','Some gaps','No Gap'],sc:{'More Gaps':0,'Some gaps':5,'No Gap':10}},{k:'configs',lbl:'Critical Configs',opts:['More Gaps','Some gaps','No Gap'],sc:{'More Gaps':0,'Some gaps':5,'No Gap':10}},{k:'promos',lbl:'Promotions Efficiency',opts:['More Gaps','Some gaps','No Gap'],sc:{'More Gaps':0,'Some gaps':5,'No Gap':10}},{k:'procadh',lbl:'Process Adherence',opts:['More Gaps','Some gaps','No Gap'],sc:{'More Gaps':0,'Some gaps':5,'No Gap':10}},{k:'expiry',lbl:'Expiry \u2013 Tier/Points',opts:['More Gaps','Some gaps','No Gap'],sc:{'More Gaps':0,'Some gaps':5,'No Gap':10}}],pw:[.2,.2,.2,.2,.2]},
   ];
   function npsPredSV(val,sc){if(val===''||val===null||val===undefined)return 0;const v=sc[String(val)];return v!==undefined?v:0;}
-  function npsPredCatRaw(npi,sec){const d=npi[sec.key]||{};const w=sec.pw.reduce((a,b)=>a+b,0);return sec.fields.reduce((a,f,i)=>a+npsPredSV(d[f.k],f.sc)*sec.pw[i],0)/w;}
+  function npsPredCatRaw(npi,sec){const secs=npi.sections||npi;const d=secs[sec.key]||{};const w=sec.pw.reduce((a,b)=>a+b,0);return sec.fields.reduce((a,f,i)=>a+npsPredSV(d[f.k],f.sc)*sec.pw[i],0)/w;}
   function npsPredHealth(npi){
     const yr=npi.years||'';
     const aw=yr==='< 1 year'?.2:yr==='1-2 years'?.1:0;
