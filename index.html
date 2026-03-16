@@ -1102,52 +1102,8 @@ var _unused = (() => {
     }, type);
   }
 
-  function ActivityItem({ activity, client, opp, onDelete }) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const followUpDate = activity.followUpDate ? new Date(activity.followUpDate + "T00:00:00") : null;
-    const isOverdue = followUpDate && followUpDate < today;
-
-    return /* @__PURE__ */ React.createElement("div", { className: "border border-gray-100 rounded-lg p-3.5 hover:bg-gray-50 transition-colors" },
-      /* @__PURE__ */ React.createElement("div", { className: "flex items-start justify-between gap-3 mb-2" },
-        /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" },
-          /* @__PURE__ */ React.createElement(ActivityBadge, { type: activity.type, compact: false })
-        ),
-        /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400" }, activity.date ? new Date(activity.date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—")
-      ),
-      /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-600 mb-2" },
-        /* @__PURE__ */ React.createElement("strong", null, activity.who || "Unknown"),
-        " with ",
-        activity.stakeholder ? /* @__PURE__ */ React.createElement("span", null, activity.stakeholder) : /* @__PURE__ */ React.createElement("span", { className: "text-gray-400" }, "—")
-      ),
-      activity.notes && /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-700 mb-2" }, activity.notes),
-      activity.nextSteps && /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-600 mb-2 p-2 bg-blue-50 rounded border-l-2 border-blue-300" },
-        /* @__PURE__ */ React.createElement("strong", null, "Next Steps: "),
-        activity.nextSteps
-      ),
-      (activity.followUpDate || activity.outcome) && /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mt-2" },
-        activity.followUpDate && /* @__PURE__ */ React.createElement("span", {
-          className: "text-xs px-2 py-1 rounded-md font-semibold",
-          style: {
-            background: isOverdue ? "#fee2e2" : "#f0fdf4",
-            color: isOverdue ? "#991b1b" : "#166534",
-            border: isOverdue ? "1px solid #fca5a5" : "1px solid #86efac"
-          }
-        }, isOverdue ? "OVERDUE" : "Follow-up", ": ", new Date(activity.followUpDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })),
-        activity.outcome && /* @__PURE__ */ React.createElement("span", {
-          className: "text-xs px-2 py-1 rounded-md font-semibold",
-          style: {
-            background: activity.outcome === "Positive" ? "#dcfce7" : activity.outcome === "Neutral" ? "#f3f4f6" : "#fee2e2",
-            color: activity.outcome === "Positive" ? "#15803d" : activity.outcome === "Neutral" ? "#374151" : "#991b1b",
-            border: activity.outcome === "Positive" ? "1px solid #bbf7d0" : activity.outcome === "Neutral" ? "1px solid #d1d5db" : "1px solid #fca5a5"
-          }
-        }, activity.outcome)
-      )
-    );
-  }
-
   function ActivitiesSection({ opp, onUpdateOpp, canEdit, currentUserEmail }) {
-    const [showForm, setShowForm] = React.useState(false);
+    const [editingId, setEditingId] = React.useState(null);
     const [form, setForm] = React.useState({
       type: "Call",
       date: new Date().toISOString().split("T")[0],
@@ -1158,14 +1114,9 @@ var _unused = (() => {
       followUpDate: "",
       outcome: "Positive"
     });
+    const [expandedId, setExpandedId] = React.useState(null);
 
-    const handleAddActivity = () => {
-      const activity = {
-        id: Date.now().toString(),
-        ...form
-      };
-      const activities = opp.activities || [];
-      onUpdateOpp({ ...opp, activities: [activity, ...activities] });
+    const resetForm = () => {
       setForm({
         type: "Call",
         date: new Date().toISOString().split("T")[0],
@@ -1176,7 +1127,29 @@ var _unused = (() => {
         followUpDate: "",
         outcome: "Positive"
       });
-      setShowForm(false);
+      setEditingId(null);
+    };
+
+    const handleSaveActivity = () => {
+      const activities = opp.activities || [];
+      if (editingId) {
+        // Update existing activity
+        const updated = activities.map((a) => a.id === editingId ? { ...form, id: editingId } : a);
+        onUpdateOpp({ ...opp, activities: updated });
+      } else {
+        // Add new activity
+        const activity = {
+          id: Date.now().toString(),
+          ...form
+        };
+        onUpdateOpp({ ...opp, activities: [activity, ...activities] });
+      }
+      resetForm();
+    };
+
+    const handleEditActivity = (activity) => {
+      setForm(activity);
+      setEditingId(activity.id);
     };
 
     const handleDeleteActivity = (id) => {
@@ -1185,95 +1158,279 @@ var _unused = (() => {
 
     const activities = (opp.activities || []).sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    return /* @__PURE__ */ React.createElement("div", { className: "card space-y-4" },
-      /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between gap-2 mb-3" },
-        /* @__PURE__ */ React.createElement("h3", { className: "font-semibold text-gray-700 text-sm" }, "Activity Log"),
-        canEdit && /* @__PURE__ */ React.createElement("button", {
-          onClick: () => setShowForm(!showForm),
-          className: "btn-primary text-xs"
-        }, "+ Log Activity")
-      ),
-      showForm && canEdit && /* @__PURE__ */ React.createElement("div", { className: "border border-blue-200 rounded-lg p-4 bg-blue-50 space-y-3 mb-4" },
-        /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-2" },
-          /* @__PURE__ */ React.createElement("div", null,
-            /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Type"),
-            /* @__PURE__ */ React.createElement("select", {
-              value: form.type,
-              onChange: (e) => setForm({ ...form, type: e.target.value }),
-              className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
-            }, ACTIVITY_TYPES.map((t) => /* @__PURE__ */ React.createElement("option", { key: t }, t)))
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const formatDate = (dateStr) => {
+      return dateStr ? new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—";
+    };
+
+    return /* @__PURE__ */ React.createElement("div", { className: "space-y-4" },
+      /* @__PURE__ */ React.createElement("h3", { className: "font-semibold text-gray-700 text-sm" }, "Activity Log"),
+      activities.length === 0 ? (
+        /* @__PURE__ */ React.createElement("div", { className: "card" },
+          canEdit && /* @__PURE__ */ React.createElement("div", { className: "border border-blue-200 rounded-lg p-4 bg-blue-50 space-y-3" },
+            /* @__PURE__ */ React.createElement("h4", { className: "font-semibold text-sm text-gray-700" }, "Log Activity"),
+            /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-2" },
+              /* @__PURE__ */ React.createElement("div", null,
+                /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Type"),
+                /* @__PURE__ */ React.createElement("select", {
+                  value: form.type,
+                  onChange: (e) => setForm({ ...form, type: e.target.value }),
+                  className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
+                }, ACTIVITY_TYPES.map((t) => /* @__PURE__ */ React.createElement("option", { key: t }, t)))
+              ),
+              /* @__PURE__ */ React.createElement("div", null,
+                /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Date"),
+                /* @__PURE__ */ React.createElement("input", {
+                  type: "date",
+                  value: form.date,
+                  onChange: (e) => setForm({ ...form, date: e.target.value }),
+                  className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
+                })
+              )
+            ),
+            /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-2" },
+              /* @__PURE__ */ React.createElement("div", null,
+                /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Who"),
+                /* @__PURE__ */ React.createElement("input", {
+                  type: "text",
+                  value: form.who,
+                  onChange: (e) => setForm({ ...form, who: e.target.value }),
+                  placeholder: "Your name",
+                  className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
+                })
+              ),
+              /* @__PURE__ */ React.createElement("div", null,
+                /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Stakeholder"),
+                /* @__PURE__ */ React.createElement("input", {
+                  type: "text",
+                  value: form.stakeholder,
+                  onChange: (e) => setForm({ ...form, stakeholder: e.target.value }),
+                  placeholder: "Client contact name",
+                  className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
+                })
+              )
+            ),
+            /* @__PURE__ */ React.createElement("div", null,
+              /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Notes"),
+              /* @__PURE__ */ React.createElement("textarea", {
+                value: form.notes,
+                onChange: (e) => setForm({ ...form, notes: e.target.value }),
+                placeholder: "What happened during this activity?",
+                rows: 2,
+                className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
+              })
+            ),
+            /* @__PURE__ */ React.createElement("div", null,
+              /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Next Steps"),
+              /* @__PURE__ */ React.createElement("input", {
+                type: "text",
+                value: form.nextSteps,
+                onChange: (e) => setForm({ ...form, nextSteps: e.target.value }),
+                placeholder: "What's the follow-up action?",
+                className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
+              })
+            ),
+            /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-2" },
+              /* @__PURE__ */ React.createElement("div", null,
+                /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Follow-Up Date"),
+                /* @__PURE__ */ React.createElement("input", {
+                  type: "date",
+                  value: form.followUpDate,
+                  onChange: (e) => setForm({ ...form, followUpDate: e.target.value }),
+                  className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
+                })
+              ),
+              /* @__PURE__ */ React.createElement("div", null,
+                /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Outcome"),
+                /* @__PURE__ */ React.createElement("select", {
+                  value: form.outcome,
+                  onChange: (e) => setForm({ ...form, outcome: e.target.value }),
+                  className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
+                }, ACTIVITY_OUTCOMES.map((o) => /* @__PURE__ */ React.createElement("option", { key: o }, o)))
+              )
+            ),
+            /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" },
+              /* @__PURE__ */ React.createElement("button", {
+                onClick: handleSaveActivity,
+                className: "btn-primary text-xs flex-1"
+              }, editingId ? "Update Activity" : "Log Activity"),
+              editingId && /* @__PURE__ */ React.createElement("button", {
+                onClick: resetForm,
+                className: "btn-secondary text-xs flex-1"
+              }, "Cancel Edit")
+            )
           ),
-          /* @__PURE__ */ React.createElement("div", null,
-            /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Date"),
-            /* @__PURE__ */ React.createElement("input", {
-              type: "date",
-              value: form.date,
-              onChange: (e) => setForm({ ...form, date: e.target.value }),
-              className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
-            })
-          )
-        ),
-        /* @__PURE__ */ React.createElement("div", null,
-          /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Stakeholder"),
-          /* @__PURE__ */ React.createElement("input", {
-            type: "text",
-            value: form.stakeholder,
-            onChange: (e) => setForm({ ...form, stakeholder: e.target.value }),
-            placeholder: "Client contact name",
-            className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
-          })
-        ),
-        /* @__PURE__ */ React.createElement("div", null,
-          /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Notes"),
-          /* @__PURE__ */ React.createElement("textarea", {
-            value: form.notes,
-            onChange: (e) => setForm({ ...form, notes: e.target.value }),
-            placeholder: "What happened during this activity?",
-            rows: 2,
-            className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
-          })
-        ),
-        /* @__PURE__ */ React.createElement("div", null,
-          /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Next Steps"),
-          /* @__PURE__ */ React.createElement("input", {
-            type: "text",
-            value: form.nextSteps,
-            onChange: (e) => setForm({ ...form, nextSteps: e.target.value }),
-            placeholder: "What's the follow-up action?",
-            className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
-          })
-        ),
-        /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-2" },
-          /* @__PURE__ */ React.createElement("div", null,
-            /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Follow-Up Date"),
-            /* @__PURE__ */ React.createElement("input", {
-              type: "date",
-              value: form.followUpDate,
-              onChange: (e) => setForm({ ...form, followUpDate: e.target.value }),
-              className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
-            })
-          ),
-          /* @__PURE__ */ React.createElement("div", null,
-            /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Outcome"),
-            /* @__PURE__ */ React.createElement("select", {
-              value: form.outcome,
-              onChange: (e) => setForm({ ...form, outcome: e.target.value }),
-              className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
-            }, ACTIVITY_OUTCOMES.map((o) => /* @__PURE__ */ React.createElement("option", { key: o }, o)))
-          )
-        ),
-        /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" },
-          /* @__PURE__ */ React.createElement("button", {
-            onClick: handleAddActivity,
-            className: "btn-primary text-xs flex-1"
-          }, "Log Activity"),
-          /* @__PURE__ */ React.createElement("button", {
-            onClick: () => setShowForm(false),
-            className: "btn-secondary text-xs flex-1"
-          }, "Cancel")
+          !canEdit && /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 text-center py-6" }, "No activities logged yet")
         )
-      ),
-      activities.length === 0 ? /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 text-center py-6" }, "No activities logged yet") : /* @__PURE__ */ React.createElement("div", { className: "space-y-2" }, activities.map((a) => /* @__PURE__ */ React.createElement(ActivityItem, { key: a.id, activity: a, onDelete: () => handleDeleteActivity(a.id) })))
+      ) : (
+        /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-3 gap-4" },
+          /* @__PURE__ */ React.createElement("div", { className: "col-span-2 space-y-0" },
+            /* @__PURE__ */ React.createElement("div", { className: "card p-0 overflow-hidden" },
+              /* @__PURE__ */ React.createElement("table", { className: "w-full text-xs" },
+                /* @__PURE__ */ React.createElement("thead", null,
+                  /* @__PURE__ */ React.createElement("tr", null,
+                    /* @__PURE__ */ React.createElement("th", { className: "px-3 py-2 text-left" }, "Type"),
+                    /* @__PURE__ */ React.createElement("th", { className: "px-3 py-2 text-left" }, "Date"),
+                    /* @__PURE__ */ React.createElement("th", { className: "px-3 py-2 text-left" }, "Who → Stakeholder"),
+                    /* @__PURE__ */ React.createElement("th", { className: "px-3 py-2 text-left" }, "Outcome"),
+                    canEdit && /* @__PURE__ */ React.createElement("th", { className: "px-3 py-2 text-center" }, "Actions")
+                  )
+                ),
+                /* @__PURE__ */ React.createElement("tbody", null,
+                  activities.map((a) => {
+                    const isExpanded = expandedId === a.id;
+                    const followUpDate = a.followUpDate ? new Date(a.followUpDate + "T00:00:00") : null;
+                    const isOverdue = followUpDate && followUpDate < today;
+                    return /* @__PURE__ */ React.createElement(React.Fragment, { key: a.id },
+                      /* @__PURE__ */ React.createElement("tr", {
+                        onClick: () => setExpandedId(isExpanded ? null : a.id),
+                        className: "hover:bg-gray-50 cursor-pointer border-b border-gray-100"
+                      },
+                        /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2" }, /* @__PURE__ */ React.createElement(ActivityBadge, { type: a.type, compact: true })),
+                        /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2 text-gray-600" }, formatDate(a.date)),
+                        /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2 text-gray-600" }, (a.who || "—"), " → ", a.stakeholder || "—"),
+                        /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2" },
+                          a.outcome && /* @__PURE__ */ React.createElement("span", {
+                            className: "text-xs px-1.5 py-0.5 rounded-md font-semibold",
+                            style: {
+                              background: a.outcome === "Positive" ? "#dcfce7" : a.outcome === "Neutral" ? "#f3f4f6" : "#fee2e2",
+                              color: a.outcome === "Positive" ? "#15803d" : a.outcome === "Neutral" ? "#374151" : "#991b1b",
+                              border: a.outcome === "Positive" ? "1px solid #bbf7d0" : a.outcome === "Neutral" ? "1px solid #d1d5db" : "1px solid #fca5a5"
+                            }
+                          }, a.outcome)
+                        ),
+                        canEdit && /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2 text-center" },
+                          /* @__PURE__ */ React.createElement("button", {
+                            onClick: (e) => { e.stopPropagation(); handleEditActivity(a); },
+                            className: "text-gray-400 hover:text-blue-600 mr-2 text-sm",
+                            title: "Edit"
+                          }, "✏️"),
+                          /* @__PURE__ */ React.createElement("button", {
+                            onClick: (e) => { e.stopPropagation(); handleDeleteActivity(a.id); },
+                            className: "text-gray-400 hover:text-red-600 text-sm",
+                            title: "Delete"
+                          }, "🗑️")
+                        )
+                      ),
+                      isExpanded && /* @__PURE__ */ React.createElement("tr", { className: "bg-blue-50 border-b border-gray-100" },
+                        /* @__PURE__ */ React.createElement("td", { colSpan: canEdit ? 5 : 4, className: "px-3 py-3" },
+                          /* @__PURE__ */ React.createElement("div", { className: "space-y-2 text-xs" },
+                            a.notes && /* @__PURE__ */ React.createElement("div", null,
+                              /* @__PURE__ */ React.createElement("strong", null, "Notes: "),
+                              a.notes
+                            ),
+                            a.nextSteps && /* @__PURE__ */ React.createElement("div", null,
+                              /* @__PURE__ */ React.createElement("strong", null, "Next Steps: "),
+                              a.nextSteps
+                            ),
+                            a.followUpDate && /* @__PURE__ */ React.createElement("div", null,
+                              /* @__PURE__ */ React.createElement("strong", null, isOverdue ? "OVERDUE Follow-up: " : "Follow-up: "),
+                              formatDate(a.followUpDate)
+                            )
+                          )
+                        )
+                      )
+                    );
+                  })
+                )
+              )
+            )
+          ),
+          canEdit && /* @__PURE__ */ React.createElement("div", { className: "col-span-1" },
+            /* @__PURE__ */ React.createElement("div", { className: "card border border-blue-200 bg-blue-50 space-y-3" },
+              /* @__PURE__ */ React.createElement("h4", { className: "font-semibold text-sm text-gray-700" }, editingId ? "Edit Activity" : "Log Activity"),
+              /* @__PURE__ */ React.createElement("div", { className: "space-y-2" },
+                /* @__PURE__ */ React.createElement("div", null,
+                  /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Type"),
+                  /* @__PURE__ */ React.createElement("select", {
+                    value: form.type,
+                    onChange: (e) => setForm({ ...form, type: e.target.value }),
+                    className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
+                  }, ACTIVITY_TYPES.map((t) => /* @__PURE__ */ React.createElement("option", { key: t }, t)))
+                ),
+                /* @__PURE__ */ React.createElement("div", null,
+                  /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Date"),
+                  /* @__PURE__ */ React.createElement("input", {
+                    type: "date",
+                    value: form.date,
+                    onChange: (e) => setForm({ ...form, date: e.target.value }),
+                    className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
+                  })
+                ),
+                /* @__PURE__ */ React.createElement("div", null,
+                  /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Who"),
+                  /* @__PURE__ */ React.createElement("input", {
+                    type: "text",
+                    value: form.who,
+                    onChange: (e) => setForm({ ...form, who: e.target.value }),
+                    placeholder: "Your name",
+                    className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
+                  })
+                ),
+                /* @__PURE__ */ React.createElement("div", null,
+                  /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Stakeholder"),
+                  /* @__PURE__ */ React.createElement("input", {
+                    type: "text",
+                    value: form.stakeholder,
+                    onChange: (e) => setForm({ ...form, stakeholder: e.target.value }),
+                    placeholder: "Client contact name",
+                    className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
+                  })
+                ),
+                /* @__PURE__ */ React.createElement("div", null,
+                  /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Notes"),
+                  /* @__PURE__ */ React.createElement("textarea", {
+                    value: form.notes,
+                    onChange: (e) => setForm({ ...form, notes: e.target.value }),
+                    placeholder: "What happened?",
+                    rows: 2,
+                    className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5 resize-none"
+                  })
+                ),
+                /* @__PURE__ */ React.createElement("div", null,
+                  /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Next Steps"),
+                  /* @__PURE__ */ React.createElement("input", {
+                    type: "text",
+                    value: form.nextSteps,
+                    onChange: (e) => setForm({ ...form, nextSteps: e.target.value }),
+                    placeholder: "Follow-up action",
+                    className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
+                  })
+                ),
+                /* @__PURE__ */ React.createElement("div", null,
+                  /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Follow-Up Date"),
+                  /* @__PURE__ */ React.createElement("input", {
+                    type: "date",
+                    value: form.followUpDate,
+                    onChange: (e) => setForm({ ...form, followUpDate: e.target.value }),
+                    className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
+                  })
+                ),
+                /* @__PURE__ */ React.createElement("div", null,
+                  /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Outcome"),
+                  /* @__PURE__ */ React.createElement("select", {
+                    value: form.outcome,
+                    onChange: (e) => setForm({ ...form, outcome: e.target.value }),
+                    className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
+                  }, ACTIVITY_OUTCOMES.map((o) => /* @__PURE__ */ React.createElement("option", { key: o }, o)))
+                ),
+                /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 pt-1" },
+                  /* @__PURE__ */ React.createElement("button", {
+                    onClick: handleSaveActivity,
+                    className: "btn-primary text-xs flex-1"
+                  }, editingId ? "Update" : "Log"),
+                  editingId && /* @__PURE__ */ React.createElement("button", {
+                    onClick: resetForm,
+                    className: "btn-secondary text-xs flex-1"
+                  }, "Cancel")
+                )
+              )
+            )
+          )
+        )
+      )
     );
   }
 
@@ -1416,6 +1573,8 @@ var _unused = (() => {
     const [dateFilter, setDateFilter] = React.useState("30");
     const [clientFilter, setClientFilter] = React.useState("all");
     const [typeFilter, setTypeFilter] = React.useState("all");
+    const [oppFilter, setOppFilter] = React.useState("all");
+    const [expandedId, setExpandedId] = React.useState(null);
 
     const clientIds = new Set(lead.clients.map((c) => c.id));
     const leadOpps = opps.filter((o) => clientIds.has(o.clientId));
@@ -1440,6 +1599,7 @@ var _unused = (() => {
       .filter((a) => !a.date || new Date(a.date + "T00:00:00") >= cutoffDate)
       .filter((a) => clientFilter === "all" || a.client?.id === clientFilter)
       .filter((a) => typeFilter === "all" || a.type === typeFilter)
+      .filter((a) => oppFilter === "all" || a.opp?.id === oppFilter)
       .sort((a, b) => new Date(b.date) - new Date(a.date));
 
     // Summary stats
@@ -1452,6 +1612,13 @@ var _unused = (() => {
       const lastActivity = (opp.activities || []).length > 0 ? (opp.activities || []).sort((a, b) => new Date(b.date) - new Date(a.date))[0] : null;
       return (opp.activities || []).filter((a) => a.followUpDate && new Date(a.followUpDate + "T00:00:00") < now && (!lastActivity || lastActivity.id !== a.id || !lastActivity.followUpDate));
     });
+
+    // Get unique opportunities for the dropdown
+    const uniqueOpps = [...new Set(leadOpps.map((o) => o.id))].map((oppId) => leadOpps.find((o) => o.id === oppId));
+
+    const formatDate = (dateStr) => {
+      return dateStr ? new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—";
+    };
 
     return /* @__PURE__ */ React.createElement("div", { className: "space-y-5" },
       /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-4 gap-4" },
@@ -1474,7 +1641,7 @@ var _unused = (() => {
       ),
       /* @__PURE__ */ React.createElement("div", { className: "card" },
         /* @__PURE__ */ React.createElement("h3", { className: "font-semibold text-gray-700 mb-3" }, "Filters"),
-        /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-4 gap-3" },
+        /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-5 gap-3" },
           /* @__PURE__ */ React.createElement("div", null,
             /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Date Range"),
             /* @__PURE__ */ React.createElement("select", {
@@ -1500,9 +1667,17 @@ var _unused = (() => {
             }, /* @__PURE__ */ React.createElement("option", { value: "all" }, "All types"), ACTIVITY_TYPES.map((t) => /* @__PURE__ */ React.createElement("option", { key: t, value: t }, t)))
           ),
           /* @__PURE__ */ React.createElement("div", null,
+            /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Opportunity"),
+            /* @__PURE__ */ React.createElement("select", {
+              value: oppFilter,
+              onChange: (e) => setOppFilter(e.target.value),
+              className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
+            }, /* @__PURE__ */ React.createElement("option", { value: "all" }, "All opps"), uniqueOpps.map((o) => /* @__PURE__ */ React.createElement("option", { key: o.id, value: o.id }, o.name)))
+          ),
+          /* @__PURE__ */ React.createElement("div", null,
             /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, " "),
             /* @__PURE__ */ React.createElement("button", {
-              onClick: () => { setDateFilter("30"); setClientFilter("all"); setTypeFilter("all"); },
+              onClick: () => { setDateFilter("30"); setClientFilter("all"); setTypeFilter("all"); setOppFilter("all"); },
               className: "btn-secondary text-xs w-full"
             }, "Reset")
           )
@@ -1523,50 +1698,77 @@ var _unused = (() => {
           })
         )
       ),
-      /* @__PURE__ */ React.createElement("div", { className: "card" },
-        /* @__PURE__ */ React.createElement("h3", { className: "font-semibold text-gray-700 mb-3" }, "Activity Timeline"),
-        filtered.length === 0 ? /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 text-center py-6" }, "No activities found") : /* @__PURE__ */ React.createElement("div", { className: "space-y-2" },
-          filtered.map((a) => /* @__PURE__ */ React.createElement("div", { key: a.id, className: "border border-gray-100 rounded-lg p-3 hover:bg-gray-50 transition-colors" },
-            /* @__PURE__ */ React.createElement("div", { className: "flex items-start justify-between gap-3 mb-2" },
-              /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" },
-                /* @__PURE__ */ React.createElement(ActivityBadge, { type: a.type, compact: false })
-              ),
-              /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400" }, a.date ? new Date(a.date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" }) : "—")
-            ),
-            /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-600 mb-1" },
-              /* @__PURE__ */ React.createElement("strong", null, a.client?.name || "—"),
-              " / ",
-              /* @__PURE__ */ React.createElement("strong", null, a.opp?.name || "—")
-            ),
-            /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-600 mb-1" },
-              /* @__PURE__ */ React.createElement("strong", null, a.who || "Unknown"),
-              " with ",
-              a.stakeholder ? a.stakeholder : /* @__PURE__ */ React.createElement("span", { className: "text-gray-400" }, "—")
-            ),
-            a.notes && /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-700 mb-1" }, a.notes),
-            a.nextSteps && /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-600 mb-1 p-1.5 bg-blue-50 rounded border-l-2 border-blue-300" },
-              /* @__PURE__ */ React.createElement("strong", null, "Next: "),
-              a.nextSteps
-            ),
-            (a.followUpDate || a.outcome) && /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mt-1" },
-              a.followUpDate && /* @__PURE__ */ React.createElement("span", {
-                className: "text-xs px-1.5 py-0.5 rounded-md font-semibold",
-                style: {
-                  background: new Date(a.followUpDate + "T00:00:00") < now ? "#fee2e2" : "#f0fdf4",
-                  color: new Date(a.followUpDate + "T00:00:00") < now ? "#991b1b" : "#166534",
-                  border: new Date(a.followUpDate + "T00:00:00") < now ? "1px solid #fca5a5" : "1px solid #86efac"
-                }
-              }, new Date(a.followUpDate + "T00:00:00") < now ? "OVERDUE" : "Follow-up", ": ", new Date(a.followUpDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })),
-              a.outcome && /* @__PURE__ */ React.createElement("span", {
-                className: "text-xs px-1.5 py-0.5 rounded-md font-semibold",
-                style: {
-                  background: a.outcome === "Positive" ? "#dcfce7" : a.outcome === "Neutral" ? "#f3f4f6" : "#fee2e2",
-                  color: a.outcome === "Positive" ? "#15803d" : a.outcome === "Neutral" ? "#374151" : "#991b1b",
-                  border: a.outcome === "Positive" ? "1px solid #bbf7d0" : a.outcome === "Neutral" ? "1px solid #d1d5db" : "1px solid #fca5a5"
-                }
-              }, a.outcome)
+      /* @__PURE__ */ React.createElement("div", { className: "card p-0 overflow-hidden" },
+        /* @__PURE__ */ React.createElement("div", { className: "px-5 py-4 border-b border-gray-100" },
+          /* @__PURE__ */ React.createElement("h3", { className: "font-semibold text-gray-700" }, "Activity Timeline")
+        ),
+        filtered.length === 0 ? /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 text-center py-6" }, "No activities found") : /* @__PURE__ */ React.createElement("table", { className: "w-full text-xs" },
+          /* @__PURE__ */ React.createElement("thead", null,
+            /* @__PURE__ */ React.createElement("tr", { className: "border-b border-gray-100 bg-gray-50" },
+              /* @__PURE__ */ React.createElement("th", { className: "px-3 py-2 text-left" }, "Date"),
+              /* @__PURE__ */ React.createElement("th", { className: "px-3 py-2 text-left" }, "Type"),
+              /* @__PURE__ */ React.createElement("th", { className: "px-3 py-2 text-left" }, "Client"),
+              /* @__PURE__ */ React.createElement("th", { className: "px-3 py-2 text-left" }, "Opportunity"),
+              /* @__PURE__ */ React.createElement("th", { className: "px-3 py-2 text-left" }, "Who → Stakeholder"),
+              /* @__PURE__ */ React.createElement("th", { className: "px-3 py-2 text-left" }, "Notes"),
+              /* @__PURE__ */ React.createElement("th", { className: "px-3 py-2 text-left" }, "Outcome"),
+              /* @__PURE__ */ React.createElement("th", { className: "px-3 py-2 text-left" }, "Follow-up")
             )
-          ))
+          ),
+          /* @__PURE__ */ React.createElement("tbody", null,
+            filtered.map((a) => {
+              const isExpanded = expandedId === a.id;
+              const followUpDate = a.followUpDate ? new Date(a.followUpDate + "T00:00:00") : null;
+              const isOverdue = followUpDate && followUpDate < now;
+              return /* @__PURE__ */ React.createElement(React.Fragment, { key: a.id },
+                /* @__PURE__ */ React.createElement("tr", {
+                  onClick: () => setExpandedId(isExpanded ? null : a.id),
+                  className: "hover:bg-gray-50 cursor-pointer border-b border-gray-100"
+                },
+                  /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2 text-gray-600" }, formatDate(a.date)),
+                  /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2" }, /* @__PURE__ */ React.createElement(ActivityBadge, { type: a.type, compact: true })),
+                  /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2 text-gray-600" }, a.client?.name || "—"),
+                  /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2 text-gray-600" }, a.opp?.name || "—"),
+                  /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2 text-gray-600" }, (a.who || "—"), " → ", a.stakeholder || "—"),
+                  /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2 text-gray-600 max-w-xs truncate", title: a.notes || "" }, a.notes || "—"),
+                  /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2" },
+                    a.outcome && /* @__PURE__ */ React.createElement("span", {
+                      className: "text-xs px-1.5 py-0.5 rounded-md font-semibold",
+                      style: {
+                        background: a.outcome === "Positive" ? "#dcfce7" : a.outcome === "Neutral" ? "#f3f4f6" : "#fee2e2",
+                        color: a.outcome === "Positive" ? "#15803d" : a.outcome === "Neutral" ? "#374151" : "#991b1b",
+                        border: a.outcome === "Positive" ? "1px solid #bbf7d0" : a.outcome === "Neutral" ? "1px solid #d1d5db" : "1px solid #fca5a5"
+                      }
+                    }, a.outcome)
+                  ),
+                  /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2" },
+                    a.followUpDate && /* @__PURE__ */ React.createElement("span", {
+                      className: "text-xs px-1.5 py-0.5 rounded-md font-semibold",
+                      style: {
+                        background: isOverdue ? "#fee2e2" : "#f0fdf4",
+                        color: isOverdue ? "#991b1b" : "#166534",
+                        border: isOverdue ? "1px solid #fca5a5" : "1px solid #86efac"
+                      }
+                    }, isOverdue ? "OVERDUE" : "Due", ": ", formatDate(a.followUpDate))
+                  )
+                ),
+                isExpanded && /* @__PURE__ */ React.createElement("tr", { className: "bg-blue-50 border-b border-gray-100" },
+                  /* @__PURE__ */ React.createElement("td", { colSpan: 8, className: "px-3 py-3" },
+                    /* @__PURE__ */ React.createElement("div", { className: "space-y-2 text-xs" },
+                      a.notes && /* @__PURE__ */ React.createElement("div", null,
+                        /* @__PURE__ */ React.createElement("strong", null, "Notes: "),
+                        a.notes
+                      ),
+                      a.nextSteps && /* @__PURE__ */ React.createElement("div", null,
+                        /* @__PURE__ */ React.createElement("strong", null, "Next Steps: "),
+                        a.nextSteps
+                      )
+                    )
+                  )
+                )
+              );
+            })
+          )
         )
       )
     );
@@ -2227,7 +2429,7 @@ var _unused = (() => {
   }
   function NPSView({ clients, onSelectClient, onUpdateClient, platformFilter = "all", onSetPlatformFilter }) {
     var _a;
-    const { canEdit, canEditClient } = useRole();
+    const { canEdit, canEditClient, isNPSEditor } = useRole();
     const [selectedBrand, setSelectedBrand] = useState(null);
     const [filterCategory, setFilterCategory] = useState(null);
     const [npsClientSort, setNpsClientSort] = useState("az");
