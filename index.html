@@ -464,11 +464,11 @@ var _unused = (() => {
           va = a.name.toLowerCase();
           vb = b.name.toLowerCase();
         } else if (key === "arr") {
-          va = Number(a.arr) || Number(a.aop) || 0;
-          vb = Number(b.arr) || Number(b.aop) || 0;
+          va = Number(a.platform === "inspire" ? a.arr : a.aop) || 0;
+          vb = Number(b.platform === "inspire" ? b.arr : b.aop) || 0;
         } else if (key === "aop") {
-          va = Number(a.aop) || 0;
-          vb = Number(b.aop) || 0;
+          va = Number(a.platform === "inspire" ? a.arr : a.aop) || 0;
+          vb = Number(b.platform === "inspire" ? b.arr : b.aop) || 0;
         } else if (key === "health") {
           const order = { Green: 0, Yellow: 1, Red: 2, null: 3 };
           va = order[getCurrentHealth(a)];
