@@ -3253,6 +3253,11 @@ var _unused = (() => {
       { category: "NPS & Goals", items: [
         { q: "Why can\u2019t I edit Farming Goals?", a: "Farming Goals can only be modified by Admins to ensure target consistency across the team. If you believe a goal needs updating, reach out to your Admin." },
         { q: "How do I log NPS scores?", a: "Navigate to the NPS Overview from the sidebar, select the relevant client and quarter, and enter the score. You must have edit access (Account Lead or Admin) for that client to make changes." }
+      ]},
+      { category: "Whitespace & Expansion", items: [
+        { q: "How is Suggested Expansion calculated?", a: "It\u2019s calculated by a specific algorithm based on the client\u2019s platform type and which of the 5 core products (Loyalty+, Engage+, Insights+, Rewards+, CDP+) they\u2019ve adopted. Here are the steps:\n\n1. Legacy client + has core products \u2192 \u201CStrategic: Migration\u201D\n2. Legacy client + no core products (e.g., strategy-only) \u2192 runs normal expansion logic (steps 3\u20138)\n3. No core products adopted \u2192 \u201CStart with Loyalty+\u201D\n4. All 5 core products adopted \u2192 \u201CFully Adopted\u201D\n5. Missing Loyalty+ \u2192 \u201CHigh Fit: Loyalty+\u201D (always prioritize the foundation)\n6. Has Loyalty+ and has Insights+ or Engage+, but missing CDP+ \u2192 \u201CHigh Fit: CDP+\u201D\n7. Otherwise \u2192 suggest next product in the adoption path: Engage+ \u2192 Insights+ \u2192 Rewards+ \u2192 CDP+\n8. Fallback \u2192 \u201CReview Portfolio\u201D\n\nNote: Only the 5 core products count toward this calculation. Service lines like Strategy, aiRA, and Other are not factored in." },
+        { q: "What does the Adoption column mean?", a: "A visual indicator of how many Products & Services the client has adopted. Each filled square = one adopted product out of the 5 core products." },
+        { q: "What counts as a \u201CHigh Whitespace\u201D account?", a: "An account with 3 or more unadopted core Products & Services. These represent the biggest expansion opportunities." }
       ]}
     ];
     var idx = 0;
@@ -3484,12 +3489,13 @@ var _unused = (() => {
       const days = daysUntilRenewal(c.nextRenewal);
       return days === null || days <= 548;
     };
+    const EXPANSION_PRODUCTS = ["Loyalty+", "Engage+", "Insights+", "Rewards+", "CDP+"];
     const getSuggestedExpansion = (c) => {
-      const owned = ownedProds(c);
-      // Legacy clients WITH products → migration; without products → normal expansion logic
+      const owned = (c.products || []).filter((p) => EXPANSION_PRODUCTS.includes(p));
+      // Legacy clients WITH core products → migration; without core products (e.g., strategy-only) → normal expansion logic
       if (isLegacy(c) && owned.length > 0) return { label: "Strategic: Migration", color: "#dc2626", bg: "#fef2f2" };
       if (owned.length === 0) return { label: "Start with Loyalty+", color: "#7c3aed", bg: "#f5f3ff" };
-      if (owned.length >= CORE_PRODUCTS.length) return { label: "Fully Adopted", color: "#16a34a", bg: "#f0fdf4" };
+      if (owned.length >= EXPANSION_PRODUCTS.length) return { label: "Fully Adopted", color: "#16a34a", bg: "#f0fdf4" };
       // Always prioritize Loyalty+ as the foundation before suggesting anything else
       if (!owned.includes("Loyalty+")) return { label: "High Fit: Loyalty+", color: "#2080BD", bg: "#eff6ff" };
       // Has Loyalty+, has data/engagement products but missing CDP+ → suggest CDP+
