@@ -1613,8 +1613,8 @@ var _unused = (() => {
       return (opp.activities || []).filter((a) => a.followUpDate && new Date(a.followUpDate + "T00:00:00") < now && (!lastActivity || lastActivity.id !== a.id || !lastActivity.followUpDate));
     });
 
-    // Get unique opportunities for the dropdown
-    const uniqueOpps = [...new Set(leadOpps.map((o) => o.id))].map((oppId) => leadOpps.find((o) => o.id === oppId));
+    // Get opportunities for dropdown — cascaded by client filter
+    const dropdownOpps = clientFilter === "all" ? leadOpps : leadOpps.filter((o) => o.clientId === clientFilter);
 
     const formatDate = (dateStr) => {
       return dateStr ? new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—";
@@ -1654,7 +1654,7 @@ var _unused = (() => {
             /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Client"),
             /* @__PURE__ */ React.createElement("select", {
               value: clientFilter,
-              onChange: (e) => setClientFilter(e.target.value),
+              onChange: (e) => { setClientFilter(e.target.value); setOppFilter("all"); },
               className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
             }, /* @__PURE__ */ React.createElement("option", { value: "all" }, "All clients"), lead.clients.map((c) => /* @__PURE__ */ React.createElement("option", { key: c.id, value: c.id }, c.name)))
           ),
@@ -1672,7 +1672,7 @@ var _unused = (() => {
               value: oppFilter,
               onChange: (e) => setOppFilter(e.target.value),
               className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
-            }, /* @__PURE__ */ React.createElement("option", { value: "all" }, "All opps"), uniqueOpps.map((o) => /* @__PURE__ */ React.createElement("option", { key: o.id, value: o.id }, o.name)))
+            }, /* @__PURE__ */ React.createElement("option", { value: "all" }, "All opps (" + dropdownOpps.length + ")"), dropdownOpps.map((o) => { const cl = clientFilter === "all" ? lead.clients.find((c) => c.id === o.clientId) : null; return /* @__PURE__ */ React.createElement("option", { key: o.id, value: o.id }, cl ? cl.name + " \u2014 " + o.name : o.name); }))
           ),
           /* @__PURE__ */ React.createElement("div", null,
             /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, " "),
