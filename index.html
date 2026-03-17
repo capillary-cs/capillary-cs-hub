@@ -1581,9 +1581,12 @@ var _unused = (() => {
 
     // Collect all activities
     const allActivities = [];
+    const _debugOppsWithActs = [];
     leadOpps.forEach((opp) => {
       const client = clients.find((c) => c.id === opp.clientId);
-      (opp.activities || []).forEach((activity) => {
+      const acts = opp.activities || [];
+      if (acts.length > 0) _debugOppsWithActs.push(opp.name + "(" + acts.length + ")");
+      acts.forEach((activity) => {
         allActivities.push({ ...activity, opp, client });
       });
     });
@@ -1621,6 +1624,7 @@ var _unused = (() => {
     };
 
     return /* @__PURE__ */ React.createElement("div", { className: "space-y-5" },
+      /* @__PURE__ */ React.createElement("div", { className: "bg-yellow-100 border border-yellow-300 rounded-lg p-3 text-xs text-yellow-800 font-mono" }, "DEBUG: lead.clients=" + lead.clients.length + " | clientIds=" + clientIds.size + " | leadOpps=" + leadOpps.length + " | oppsWithActivities=" + _debugOppsWithActs.join(", ") + " | totalActivities=" + allActivities.length + " | filtered=" + filtered.length),
       /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-4 gap-4" },
         /* @__PURE__ */ React.createElement("div", { className: "bg-blue-50 rounded-xl p-4 text-center" },
           /* @__PURE__ */ React.createElement("div", { className: "text-2xl font-bold", style: { color: "#2080BD" } }, thisMonth.length),
