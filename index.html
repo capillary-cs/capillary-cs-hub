@@ -3485,14 +3485,17 @@ var _unused = (() => {
       return days === null || days <= 548;
     };
     const getSuggestedExpansion = (c) => {
-      if (isLegacy(c)) return { label: "Strategic: Migration", color: "#dc2626", bg: "#fef2f2" };
       const owned = ownedProds(c);
-      const unowned = unownedProds(c);
+      // Legacy clients WITH products → migration; without products → normal expansion logic
+      if (isLegacy(c) && owned.length > 0) return { label: "Strategic: Migration", color: "#dc2626", bg: "#fef2f2" };
       if (owned.length === 0) return { label: "Start with Loyalty+", color: "#7c3aed", bg: "#f5f3ff" };
       if (owned.length >= CORE_PRODUCTS.length) return { label: "Fully Adopted", color: "#16a34a", bg: "#f0fdf4" };
+      // Always prioritize Loyalty+ as the foundation before suggesting anything else
+      if (!owned.includes("Loyalty+")) return { label: "High Fit: Loyalty+", color: "#2080BD", bg: "#eff6ff" };
+      // Has Loyalty+, has data/engagement products but missing CDP+ → suggest CDP+
       if (!owned.includes("CDP+") && (owned.includes("Insights+") || owned.includes("Engage+")))
         return { label: "High Fit: CDP+", color: "#2080BD", bg: "#eff6ff" };
-      const PROD_ORDER = ["Loyalty+", "Engage+", "Insights+", "Rewards+", "CDP+"];
+      const PROD_ORDER = ["Engage+", "Insights+", "Rewards+", "CDP+"];
       const nextProd = PROD_ORDER.find((p) => !owned.includes(p));
       if (nextProd) return { label: `Medium Fit: ${nextProd}`, color: "#ca8a04", bg: "#fefce8" };
       return { label: "Review Portfolio", color: "#6b7280", bg: "#f9fafb" };
