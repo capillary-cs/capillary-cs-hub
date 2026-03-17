@@ -485,6 +485,154 @@ var _unused = (() => {
     };
     return [sortState, toggleSort, sortClients];
   }
+  // === SLACK INTEGRATION ===
+  const SLACK_STORAGE_KEY = "capillary_crm_slack_config";
+  function getSlackConfig() {
+    try { return JSON.parse(localStorage.getItem(SLACK_STORAGE_KEY)) || { webhookUrl: "", enabled: false, alerts: { churn: true, healthDrop: true, dealWon: true, weeklySummary: true, renewalCountdown: true } }; } catch(e) { return { webhookUrl: "", enabled: false, alerts: { churn: true, healthDrop: true, dealWon: true, weeklySummary: true, renewalCountdown: true } }; }
+  }
+  function saveSlackConfig(cfg) { localStorage.setItem(SLACK_STORAGE_KEY, JSON.stringify(cfg)); }
+
+  async function sendSlackMessage(payload) {
+    const cfg = getSlackConfig();
+    if (!cfg.enabled || !cfg.webhookUrl) return false;
+    try {
+      const resp = await fetch(cfg.webhookUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      return resp.ok;
+    } catch(e) { console.warn("Slack alert failed:", e); return false; }
+  }
+
+  function slackChurnAlert(client, flaggedBy) {
+    const cfg = getSlackConfig();
+    if (!cfg.alerts.churn) return;
+    const health = getCurrentHealth(client);
+    const days = client.nextRenewal ? daysUntil(client.nextRenewal) : null;
+    sendSlackMessage({
+      blocks: [
+        { type: "header", text: { type: "plain_text", text: "🚨 Churn Alert", emoji: true } },
+        { type: "section", text: { type: "mrkdwn", text: `*${client.name}* has been flagged as churning` } },
+        { type: "section", fields: [
+          { type: "mrkdwn", text: `*Client:*\n${client.name}` },
+          { type: "mrkdwn", text: `*Platform:*\n${client.platform === "inspire" ? "✦ Inspire" : "◈ Capillary"}` },
+          { type: "mrkdwn", text: `*ARR:*\n$${(Number(client.arr) || Number(client.aop) || 0).toLocaleString()}` },
+          { type: "mrkdwn", text: `*Account Lead:*\n${client.execSponsor || "—"}` },
+          { type: "mrkdwn", text: `*Health:*\n${health === "Green" ? "🟢" : health === "Yellow" ? "🟡" : health === "Red" ? "🔴" : "⚪"} ${health || "No data"}` },
+          { type: "mrkdwn", text: `*Renewal Date:*\n${client.nextRenewal || "—"}${days !== null ? " (" + days + "d)" : ""}` },
+          { type: "mrkdwn", text: `*Churn Date:*\n${client.churnDate || "Not set"}` },
+          { type: "mrkdwn", text: `*Flagged by:*\n${flaggedBy || "Unknown"}` }
+        ]},
+        { type: "context", elements: [{ type: "mrkdwn", text: "CS Hub • Client Profile" }] }
+      ]
+    });
+  }
+
+  function slackHealthDropAlert(client, previousHealth, newHealth, updatedBy) {
+    const cfg = getSlackConfig();
+    if (!cfg.alerts.healthDrop) return;
+    if (newHealth !== "Red") return;
+    if (previousHealth !== "Green" && previousHealth !== "Yellow") return;
+    const days = client.nextRenewal ? daysUntil(client.nextRenewal) : null;
+    sendSlackMessage({
+      blocks: [
+        { type: "header", text: { type: "plain_text", text: "📉 Health Drop", emoji: true } },
+        { type: "section", text: { type: "mrkdwn", text: `*${client.name}* — ${previousHealth === "Green" ? "🟢" : "🟡"} ${previousHealth} → 🔴 ${newHealth}` } },
+        { type: "section", fields: [
+          { type: "mrkdwn", text: `*Client:*\n${client.name}` },
+          { type: "mrkdwn", text: `*Previous Health:*\n${previousHealth === "Green" ? "🟢" : "🟡"} ${previousHealth}` },
+          { type: "mrkdwn", text: `*Current Health:*\n🔴 ${newHealth}` },
+          { type: "mrkdwn", text: `*ARR:*\n$${(Number(client.arr) || Number(client.aop) || 0).toLocaleString()}` },
+          { type: "mrkdwn", text: `*Account Lead:*\n${client.execSponsor || "—"}` },
+          { type: "mrkdwn", text: `*Renewal Date:*\n${client.nextRenewal || "—"}${days !== null ? " (" + days + "d)" : ""}` },
+          { type: "mrkdwn", text: `*Updated by:*\n${updatedBy || "Unknown"}` }
+        ]},
+        { type: "context", elements: [{ type: "mrkdwn", text: "CS Hub • Client Profile" }] }
+      ]
+    });
+  }
+
+  function slackDealWonAlert(opp, client) {
+    const cfg = getSlackConfig();
+    if (!cfg.alerts.dealWon) return;
+    sendSlackMessage({
+      blocks: [
+        { type: "header", text: { type: "plain_text", text: "🎉 Deal Won!", emoji: true } },
+        { type: "section", text: { type: "mrkdwn", text: `*Closed-Won:* ${client ? client.name + " — " : ""}${opp.name}` } },
+        { type: "section", fields: [
+          { type: "mrkdwn", text: `*Client:*\n${client ? client.name : "—"}` },
+          { type: "mrkdwn", text: `*Opportunity:*\n${opp.name}` },
+          { type: "mrkdwn", text: `*Value:*\n$${(opp.value || 0).toLocaleString()}` },
+          { type: "mrkdwn", text: `*Pipeline:*\n${opp.pipeline === "inspire" ? "✦ Inspire" : "◈ Capillary"}` },
+          { type: "mrkdwn", text: `*Owner:*\n${opp.owner || "—"}` },
+          { type: "mrkdwn", text: `*Close Date:*\n${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}` }
+        ]},
+        { type: "context", elements: [{ type: "mrkdwn", text: "CS Hub • Opportunity Detail" }] }
+      ]
+    });
+  }
+
+  function slackWeeklySummary(clients, opps) {
+    const cfg = getSlackConfig();
+    if (!cfg.alerts.weeklySummary) return;
+    const active = clients.filter(function(c) { return !c.archived; });
+    var greenCount = 0, yellowCount = 0, redCount = 0, noCount = 0;
+    active.forEach(function(c) { var h = getCurrentHealth(c); if (h === "Green") greenCount++; else if (h === "Yellow") yellowCount++; else if (h === "Red") redCount++; else noCount++; });
+    var churning = active.filter(function(c) { return c.churning; });
+    var renewals90 = active.filter(function(c) { return c.nextRenewal && daysUntil(c.nextRenewal) <= 90 && daysUntil(c.nextRenewal) >= 0; }).sort(function(a, b) { return daysUntil(a.nextRenewal) - daysUntil(b.nextRenewal); });
+
+    var healthLine = "🟢 " + greenCount + " Green  🟡 " + yellowCount + " Yellow  🔴 " + redCount + " Red  ⚪ " + noCount + " No Data";
+    var churningLines = churning.length > 0 ? "\n\n*⚠️ " + churning.length + " client" + (churning.length > 1 ? "s" : "") + " flagged as churning:*\n" + churning.map(function(c) { return "• " + c.name + (c.churnDate ? " — Churn date: " + c.churnDate : " — Churn date: Not set"); }).join("\n") : "";
+    var renewalLines = renewals90.length > 0 ? "\n\n*📅 Renewals next 90 days: " + renewals90.length + "*\n" + renewals90.map(function(c) { return "• " + c.name + " — " + c.nextRenewal + " (" + daysUntil(c.nextRenewal) + "d)"; }).join("\n") : "\n\n*📅 No renewals in the next 90 days* ✅";
+
+    sendSlackMessage({
+      blocks: [
+        { type: "header", text: { type: "plain_text", text: "📊 CS Hub — Weekly Summary", emoji: true } },
+        { type: "section", text: { type: "mrkdwn", text: healthLine + churningLines + renewalLines } },
+        { type: "context", elements: [{ type: "mrkdwn", text: "CS Hub • " + active.length + " active clients • " + opps.length + " opportunities" }] }
+      ]
+    });
+  }
+
+  function slackRenewalCountdown(clients) {
+    const cfg = getSlackConfig();
+    if (!cfg.alerts.renewalCountdown) return;
+    var active = clients.filter(function(c) { return !c.archived; });
+    var renewals60 = active.filter(function(c) { return c.nextRenewal && daysUntil(c.nextRenewal) <= 60 && daysUntil(c.nextRenewal) >= 0; }).sort(function(a, b) { return daysUntil(a.nextRenewal) - daysUntil(b.nextRenewal); });
+    var overdue = active.filter(function(c) { return c.nextRenewal && daysUntil(c.nextRenewal) < 0; });
+
+    if (renewals60.length === 0 && overdue.length === 0) return;
+
+    var lines = "";
+    if (overdue.length > 0) {
+      lines += "*🚨 Overdue (" + overdue.length + "):*\n" + overdue.map(function(c) { return "• " + c.name + " — " + c.nextRenewal + " (*" + Math.abs(daysUntil(c.nextRenewal)) + "d overdue*)" + (c.churning ? " ⚠️ CHURNING" : ""); }).join("\n") + "\n\n";
+    }
+    lines += "*📅 Renewing within 60 days (" + renewals60.length + "):*\n" + renewals60.map(function(c) {
+      var d = daysUntil(c.nextRenewal);
+      var health = getCurrentHealth(c);
+      var healthIcon = health === "Green" ? "🟢" : health === "Yellow" ? "🟡" : health === "Red" ? "🔴" : "⚪";
+      return "• *" + c.name + "* — $" + (Number(c.arr) || Number(c.aop) || 0).toLocaleString() + " ARR\n   Renewal: " + c.nextRenewal + " · " + d + " days · " + healthIcon + " " + (health || "No data") + (c.churning ? " · ⚠️ CHURNING" : "");
+    }).join("\n");
+
+    sendSlackMessage({
+      blocks: [
+        { type: "header", text: { type: "plain_text", text: "📅 Renewal Countdown", emoji: true } },
+        { type: "section", text: { type: "mrkdwn", text: lines } },
+        { type: "context", elements: [{ type: "mrkdwn", text: "CS Hub • Renewals Tab" }] }
+      ]
+    });
+  }
+
+  function checkWeeklySlackAlerts(clients, opps) {
+    var cfg = getSlackConfig();
+    if (!cfg.enabled || !cfg.webhookUrl) return;
+    var now = new Date();
+    if (now.getDay() !== 1) return;
+    var lastSent = localStorage.getItem("capillary_slack_weekly_last");
+    var today = now.toISOString().slice(0, 10);
+    if (lastSent === today) return;
+    localStorage.setItem("capillary_slack_weekly_last", today);
+    slackWeeklySummary(clients, opps);
+    slackRenewalCountdown(clients);
+  }
+
   function HealthDot({ health, size = 32, editable = false, onClick }) {
     const cls = health === "Green" ? "health-green" : health === "Yellow" ? "health-yellow" : health === "Red" ? "health-red" : "health-none";
     const label = health ? health[0] : "\u2014";
@@ -963,7 +1111,12 @@ var _unused = (() => {
     }, [client.id]);
     const cycleHealth = (m) => {
       const cycle = { null: "Green", Green: "Yellow", Yellow: "Red", Red: null };
-      const updated = { ...form, healthHistory: { ...form.healthHistory, [m]: cycle[form.healthHistory[m] || null] } };
+      const oldHealth = form.healthHistory[m] || null;
+      const newHealth = cycle[oldHealth];
+      const updated = { ...form, healthHistory: { ...form.healthHistory, [m]: newHealth } };
+      if ((oldHealth === "Green" || oldHealth === "Yellow") && newHealth === "Red") {
+        slackHealthDropAlert(updated, oldHealth, newHealth, "Current User");
+      }
       setForm(updated);
       onUpdateClient(updated);
     };
@@ -996,6 +1149,9 @@ var _unused = (() => {
           cleaned[k] = isNaN(n) ? null : n;
         }
       });
+      if (cleaned.churning && !client.churning) {
+        slackChurnAlert(cleaned, "Current User");
+      }
       onUpdateClient(cleaned);
       setEditing(false);
     };
@@ -1517,7 +1673,11 @@ var _unused = (() => {
     );
     const row = (label, value, editEl, idx) => /* @__PURE__ */ React.createElement("div", { className: "flex gap-3 py-3 px-3 rounded-lg items-center " + (idx % 2 === 0 ? "bg-gray-50" : ""), style: { minHeight: "44px" } }, /* @__PURE__ */ React.createElement("span", { className: "text-xs font-semibold text-gray-500 uppercase tracking-wide w-36 shrink-0" }, label), editing && editEl ? editEl : /* @__PURE__ */ React.createElement("span", { className: "text-sm font-medium text-gray-800" }, value || "\u2014"));
     const saveEdit = () => {
-      onUpdateOpp({ ...form, lastUpdated: (/* @__PURE__ */ new Date()).toLocaleDateString() });
+      var updatedOpp = { ...form, lastUpdated: (/* @__PURE__ */ new Date()).toLocaleDateString() };
+      if (form.status === "Closed-Won" && opp.status !== "Closed-Won") {
+        slackDealWonAlert(updatedOpp, client);
+      }
+      onUpdateOpp(updatedOpp);
       setEditing(false);
     };
     const tabs = [
@@ -3097,6 +3257,99 @@ var _unused = (() => {
       /* @__PURE__ */ React.createElement("span", { className: "text-gray-300 font-normal" }, "(", fmt$(wonVal), " won)")
     ), showClosed && /* @__PURE__ */ React.createElement("div", { className: "overflow-x-auto pb-2 mt-3" }, /* @__PURE__ */ React.createElement("div", { className: "flex gap-3", style: { alignItems: "flex-start", minWidth: "max-content" } }, CLOSED_STAGES.map((s) => /* @__PURE__ */ React.createElement(KanbanCol, { key: s, stage: s, dimmed: true }))))));
   }
+  function SlackSettings({ clients, opps }) {
+    const [config, setConfig] = React.useState(getSlackConfig);
+    const [testStatus, setTestStatus] = React.useState(null);
+
+    const updateConfig = function(updates) {
+      var next = { ...config, ...updates };
+      setConfig(next);
+      saveSlackConfig(next);
+    };
+    const toggleAlert = function(key) {
+      var next = { ...config, alerts: { ...config.alerts, [key]: !config.alerts[key] } };
+      setConfig(next);
+      saveSlackConfig(next);
+    };
+
+    const sendTest = async function() {
+      setTestStatus("sending");
+      try {
+        var resp = await fetch(config.webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ blocks: [
+            { type: "header", text: { type: "plain_text", text: "🧪 CS Hub Test Alert", emoji: true } },
+            { type: "section", text: { type: "mrkdwn", text: "If you see this message, your CS Hub Slack integration is working! ✅" } },
+            { type: "context", elements: [{ type: "mrkdwn", text: "CS Hub • Test message sent at " + new Date().toLocaleString() }] }
+          ]})
+        });
+        setTestStatus(resp.ok ? "success" : "error");
+      } catch(e) { setTestStatus("error"); }
+      setTimeout(function() { setTestStatus(null); }, 4000);
+    };
+
+    const ALERT_TYPES = [
+      { key: "churn", label: "Churn Alerts", desc: "When a client is flagged as churning", icon: "🚨" },
+      { key: "healthDrop", label: "Health Drops", desc: "When a client's health drops to Red", icon: "📉" },
+      { key: "dealWon", label: "Deal Won", desc: "When an opportunity moves to Closed-Won", icon: "🎉" },
+      { key: "weeklySummary", label: "Weekly Summary", desc: "Monday morning overview of health, churning, renewals", icon: "📊" },
+      { key: "renewalCountdown", label: "Renewal Countdown", desc: "Weekly list of renewals within 60 days", icon: "📅" }
+    ];
+
+    return React.createElement("div", { className: "card" },
+      React.createElement("div", { className: "flex items-center gap-3 mb-4" },
+        React.createElement("div", { className: "w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0", style: { background: "linear-gradient(135deg, #611f69, #8b2f97)" } }, "💬"),
+        React.createElement("div", null,
+          React.createElement("h3", { className: "font-bold text-gray-900 text-base" }, "Slack Integration"),
+          React.createElement("p", { className: "text-xs text-gray-400 mt-0.5" }, "Send automated alerts to your Slack channel")
+        ),
+        React.createElement("div", { className: "ml-auto" },
+          React.createElement("label", { className: "flex items-center gap-2 cursor-pointer select-none" },
+            React.createElement("input", { type: "checkbox", checked: config.enabled, onChange: function() { updateConfig({ enabled: !config.enabled }); }, className: "w-5 h-5 accent-purple-600 cursor-pointer" }),
+            React.createElement("span", { className: "text-sm font-semibold " + (config.enabled ? "text-purple-600" : "text-gray-400") }, config.enabled ? "Active" : "Inactive")
+          )
+        )
+      ),
+      React.createElement("div", { className: "space-y-4" },
+        React.createElement("div", null,
+          React.createElement("label", { className: "text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block" }, "Webhook URL"),
+          React.createElement("div", { className: "flex gap-2" },
+            React.createElement("input", {
+              type: "url",
+              className: "flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-300 font-mono",
+              placeholder: "https://hooks.slack.com/services/...",
+              value: config.webhookUrl,
+              onChange: function(e) { updateConfig({ webhookUrl: e.target.value }); }
+            }),
+            React.createElement("button", {
+              onClick: sendTest,
+              disabled: !config.webhookUrl || testStatus === "sending",
+              className: "px-4 py-2 rounded-lg text-xs font-semibold transition-all " + (!config.webhookUrl ? "bg-gray-100 text-gray-400 cursor-not-allowed" : testStatus === "success" ? "bg-green-500 text-white" : testStatus === "error" ? "bg-red-500 text-white" : "bg-purple-500 text-white hover:bg-purple-600")
+            }, testStatus === "sending" ? "Sending..." : testStatus === "success" ? "✓ Sent!" : testStatus === "error" ? "✗ Failed" : "Test")
+          ),
+          React.createElement("p", { className: "text-xs text-gray-400 mt-1.5" }, "Paste the Incoming Webhook URL from your Slack app settings")
+        ),
+        React.createElement("div", null,
+          React.createElement("label", { className: "text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block" }, "Alert Types"),
+          React.createElement("div", { className: "space-y-2" },
+            ALERT_TYPES.map(function(a) {
+              return React.createElement("div", { key: a.key, className: "flex items-center gap-3 p-3 rounded-xl border transition-all " + (config.alerts[a.key] ? "border-purple-200 bg-purple-50" : "border-gray-100 bg-gray-50") },
+                React.createElement("span", { className: "text-lg" }, a.icon),
+                React.createElement("div", { className: "flex-1" },
+                  React.createElement("div", { className: "text-sm font-semibold text-gray-800" }, a.label),
+                  React.createElement("div", { className: "text-xs text-gray-400" }, a.desc)
+                ),
+                React.createElement("label", { className: "cursor-pointer" },
+                  React.createElement("input", { type: "checkbox", checked: config.alerts[a.key], onChange: function() { toggleAlert(a.key); }, className: "w-4 h-4 accent-purple-600 cursor-pointer" })
+                )
+              );
+            })
+          )
+        )
+      )
+    );
+  }
   function ReportsView({ clients, opps }) {
     const [activeReport, setActiveReport] = React.useState(null);
     if (activeReport) return /* @__PURE__ */ React.createElement(ReportPage, { id: activeReport, clients, opps, onBack: () => setActiveReport(null) });
@@ -3111,7 +3364,7 @@ var _unused = (() => {
       { id: "npsReport",   icon: "⭐", title: "NPS Portfolio Report",      desc: "NPS distribution across portfolio, top/bottom performers, and correlation with account health.",            color: "#2080BD", bg: "#eef2ff" },
     ];
     const generated = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-    return /* @__PURE__ */ React.createElement("div", { className: "p-6 space-y-5" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("h1", { className: "text-2xl font-bold text-gray-900" }, "Reports"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-400 mt-0.5" }, "Generate and export snapshots for ELT and board presentations"))), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-4" }, ...REPORTS.map((r) => /* @__PURE__ */ React.createElement("div", { key: r.id, onClick: () => setActiveReport(r.id), className: "card cursor-pointer transition-all hover:shadow-md group", style: { borderLeft: "4px solid " + r.color } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-start gap-3 mb-3" }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 28, lineHeight: 1 } }, r.icon), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "font-bold text-gray-800 text-base mb-1" }, r.title), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-500 leading-snug" }, r.desc))), /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mt-2 pt-3 border-t border-gray-50" }, /* @__PURE__ */ React.createElement("span", { className: "text-xs text-gray-400" }, "Live data · " + generated), /* @__PURE__ */ React.createElement("span", { className: "text-xs font-bold group-hover:underline", style: { color: r.color } }, "Generate →"))))), /* @__PURE__ */ React.createElement("div", { className: "card", style: { background: "#f8fafc" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mb-1" }, /* @__PURE__ */ React.createElement("span", null, "ℹ️"), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-semibold text-gray-600" }, "How to export")), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-500" }, "Each report opens as a clean, print-ready view. Use \"🖨 Print / Save as PDF\" inside any report — your browser will let you save it as a PDF or send to a printer. Use \"Copy Summary\" to paste key metrics directly into a board deck or email.")));
+    return /* @__PURE__ */ React.createElement("div", { className: "p-6 space-y-5" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("h1", { className: "text-2xl font-bold text-gray-900" }, "Reports"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-400 mt-0.5" }, "Generate and export snapshots for ELT and board presentations"))), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-4" }, ...REPORTS.map((r) => /* @__PURE__ */ React.createElement("div", { key: r.id, onClick: () => setActiveReport(r.id), className: "card cursor-pointer transition-all hover:shadow-md group", style: { borderLeft: "4px solid " + r.color } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-start gap-3 mb-3" }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 28, lineHeight: 1 } }, r.icon), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "font-bold text-gray-800 text-base mb-1" }, r.title), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-500 leading-snug" }, r.desc))), /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mt-2 pt-3 border-t border-gray-50" }, /* @__PURE__ */ React.createElement("span", { className: "text-xs text-gray-400" }, "Live data · " + generated), /* @__PURE__ */ React.createElement("span", { className: "text-xs font-bold group-hover:underline", style: { color: r.color } }, "Generate →"))))), /* @__PURE__ */ React.createElement("div", { className: "card", style: { background: "#f8fafc" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mb-1" }, /* @__PURE__ */ React.createElement("span", null, "ℹ️"), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-semibold text-gray-600" }, "How to export")), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-500" }, "Each report opens as a clean, print-ready view. Use \"🖨 Print / Save as PDF\" inside any report — your browser will let you save it as a PDF or send to a printer. Use \"Copy Summary\" to paste key metrics directly into a board deck or email.")), /* @__PURE__ */ React.createElement(SlackSettings, { clients, opps }));
   }
   function ReportPage({ id, clients, opps, onBack }) {
     const now = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
@@ -4472,6 +4725,10 @@ var _unused = (() => {
         setTimeout(() => setSaveMsg(""), 3e3);
       });
     }, [clients, opps, rels]);
+    useEffect(() => {
+      if (!dbLoaded || clients.length === 0) return;
+      checkWeeklySlackAlerts(clients, opps);
+    }, [dbLoaded]);
     useEffect(() => {
       if (!dbLoaded) return;
       try {
