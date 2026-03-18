@@ -1702,7 +1702,8 @@ var _unused = (() => {
             canEdit && (editing ? /* @__PURE__ */ React.createElement(React.Fragment, null,
               /* @__PURE__ */ React.createElement("button", { onClick: saveEdit, className: "btn-primary text-sm" }, "Save"),
               /* @__PURE__ */ React.createElement("button", { onClick: () => { setForm({ ...opp }); setEditing(false); }, className: "btn-secondary text-sm" }, "Cancel")
-            ) : /* @__PURE__ */ React.createElement("button", { onClick: () => setEditing(true), className: "btn-secondary text-sm" }, "\u270F\uFE0F Edit"), onRemoveOpp && React.createElement("button", { onClick: function() { onRemoveOpp(opp.id, opp.name); }, className: "btn-danger text-sm" }, "\uD83D\uDDD1\uFE0F Delete"))
+            ) : /* @__PURE__ */ React.createElement("button", { onClick: () => setEditing(true), className: "btn-secondary text-sm" }, "\u270F\uFE0F Edit")),
+            canEdit && onRemoveOpp && !editing && React.createElement("button", { onClick: function() { onRemoveOpp(opp.id, opp.name); }, className: "btn-danger text-sm" }, "\uD83D\uDDD1\uFE0F Delete")
           )
         ),
         /* @__PURE__ */ React.createElement("div", { className: "bg-gray-50 rounded-xl p-1.5 flex gap-2 mt-4" },
