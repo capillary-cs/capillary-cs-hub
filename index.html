@@ -298,6 +298,8 @@ var _unused = (() => {
   const DB_KEY_OPPS = "capillary_crm_opps_v4";
   const DB_KEY_RELS = "capillary_crm_rels_v4";
   const DB_KEY_GOALS = "capillary_crm_goals_v1";
+  const DB_KEY_CALENDAR = "capillary_crm_calendar_v1";
+  const TEAM_ROSTER = ["Aneesh","Sridhar","Anant","Dena","Ishant","Sid","Alexis","Lissa","Andy","Christa","Yuki"];
   const NPS_DATA = {};
   /* ══════ NPS PREDICTION ENGINE ══════ */
   const NPS_PRED_SECS=[
@@ -4579,6 +4581,224 @@ var _unused = (() => {
       "Sign in with Google"
     )), /* @__PURE__ */ React.createElement("div", { style: { color: "#334155", fontSize: 11, fontFamily: "sans-serif" } }, "Access restricted to Capillary Technologies accounts"));
   }
+  function GlobalCalendarView({ clients, calendarEvents, onAddEvent, onUpdateEvent, onDeleteEvent, onSelectClient }) {
+    const { useState, useMemo } = React;
+    const [tab, setTab] = useState("calendar");
+    const [curYear, setCurYear] = useState(() => new Date().getFullYear());
+    const [curMonth, setCurMonth] = useState(() => new Date().getMonth());
+    const [showModal, setShowModal] = useState(false);
+    const [editingEvent, setEditingEvent] = useState(null);
+    const EMPTY_FORM = { clientId: "", type: "F2F Meeting", city: "", startDate: "", endDate: "", attendees: [], notes: "", clientAvailability: false };
+    const [form, setForm] = useState(EMPTY_FORM);
+    const EVENT_TYPES = ["QBR", "EBR", "F2F Meeting", "Executive Visit", "Client Onsite", "Sales Meeting", "Other"];
+    const TYPE_STYLE = {
+      "QBR": { bg: "#f3e8ff", border: "#7c3aed", text: "#6d28d9" },
+      "EBR": { bg: "#fce7f3", border: "#db2777", text: "#be185d" },
+      "F2F Meeting": { bg: "#dbeafe", border: "#2563eb", text: "#1d4ed8" },
+      "Executive Visit": { bg: "#fef3c7", border: "#d97706", text: "#b45309" },
+      "Client Onsite": { bg: "#d1fae5", border: "#059669", text: "#065f46" },
+      "Sales Meeting": { bg: "#e0f2fe", border: "#0284c7", text: "#0369a1" },
+      "Other": { bg: "#f1f5f9", border: "#64748b", text: "#475569" },
+    };
+    const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    const today = new Date();
+    const activeClients = clients.filter(c => !c.archived).sort((a,b) => a.name.localeCompare(b.name));
+    const clientName = (id) => { const c = activeClients.find(x => x.id === id); return c ? c.name : ""; };
+    const fmt = (ds) => { if (!ds) return ""; const [y,m,d] = ds.split("-"); return MONTH_NAMES[parseInt(m)-1].slice(0,3) + " " + parseInt(d) + ", " + y; };
+    const eventsOnDay = (y, m, d) => {
+      const day = new Date(y, m, d);
+      return calendarEvents.filter(ev => {
+        const s = new Date(ev.startDate + "T00:00:00");
+        const e2 = new Date((ev.endDate || ev.startDate) + "T00:00:00");
+        return day >= s && day <= e2;
+      });
+    };
+    const calGrid = useMemo(() => {
+      const firstDay = new Date(curYear, curMonth, 1).getDay();
+      const daysInMonth = new Date(curYear, curMonth + 1, 0).getDate();
+      const cells = [];
+      for (let i = 0; i < firstDay; i++) cells.push(null);
+      for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+      return cells;
+    }, [curYear, curMonth]);
+    const prevMonth = () => { if (curMonth === 0) { setCurMonth(11); setCurYear(y => y - 1); } else setCurMonth(m => m - 1); };
+    const nextMonth = () => { if (curMonth === 11) { setCurMonth(0); setCurYear(y => y + 1); } else setCurMonth(m => m + 1); };
+    const openAdd = (day) => {
+      const ds = day ? curYear + "-" + String(curMonth+1).padStart(2,"0") + "-" + String(day).padStart(2,"0") : "";
+      setForm({ ...EMPTY_FORM, startDate: ds, endDate: ds });
+      setEditingEvent(null); setShowModal(true);
+    };
+    const openEdit = (ev, e) => { e.stopPropagation(); setForm({ ...ev }); setEditingEvent(ev); setShowModal(true); };
+    const saveEvent = () => {
+      if (!form.type || !form.startDate || !form.city) return;
+      const ev = { ...form, id: editingEvent ? editingEvent.id : Date.now().toString() };
+      if (editingEvent) onUpdateEvent(ev); else onAddEvent(ev);
+      setShowModal(false); setForm(EMPTY_FORM);
+    };
+    const deleteEvent = () => { if (!editingEvent) return; onDeleteEvent(editingEvent.id); setShowModal(false); setForm(EMPTY_FORM); };
+    const toggleAttendee = (name) => { const curr = form.attendees || []; setForm({ ...form, attendees: curr.includes(name) ? curr.filter(x => x !== name) : [...curr, name] }); };
+    const cityGroups = useMemo(() => {
+      const todayStr = today.toISOString().split("T")[0];
+      const upcoming = calendarEvents.filter(ev => (ev.endDate || ev.startDate) >= todayStr).sort((a,b) => a.startDate.localeCompare(b.startDate));
+      const g = {};
+      upcoming.forEach(ev => { const city = ev.city || "Unknown"; if (!g[city]) g[city] = []; g[city].push(ev); });
+      return g;
+    }, [calendarEvents]);
+    const modalEl = showModal && React.createElement("div", { className: "fixed inset-0 z-50 flex items-center justify-center", style: { background: "rgba(0,0,0,0.5)" }, onClick: (e) => { if (e.target === e.currentTarget) setShowModal(false); } },
+      React.createElement("div", { className: "bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg mx-4", style: { maxHeight: "90vh", overflowY: "auto" } },
+        React.createElement("div", { className: "flex items-center justify-between mb-4" },
+          React.createElement("h3", { className: "text-lg font-bold text-gray-800" }, editingEvent ? "Edit Event" : "Add Calendar Event"),
+          React.createElement("button", { onClick: () => setShowModal(false), className: "text-gray-400 hover:text-gray-600 text-xl font-bold leading-none" }, "\xD7")
+        ),
+        React.createElement("div", { className: "mb-3" },
+          React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Client"),
+          React.createElement("select", { className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-400", value: form.clientId, onChange: e => setForm({ ...form, clientId: e.target.value }) },
+            React.createElement("option", { value: "" }, "Select client\u2026"),
+            activeClients.map(c => React.createElement("option", { key: c.id, value: c.id }, c.name))
+          )
+        ),
+        React.createElement("div", { className: "mb-3" },
+          React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Event Type"),
+          React.createElement("select", { className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-400", value: form.type, onChange: e => setForm({ ...form, type: e.target.value }) },
+            EVENT_TYPES.map(t => React.createElement("option", { key: t }, t))
+          )
+        ),
+        React.createElement("div", { className: "mb-3" },
+          React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "City / Location *"),
+          React.createElement("input", { type: "text", className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-400", placeholder: "e.g. Chicago, IL", value: form.city, onChange: e => setForm({ ...form, city: e.target.value }) })
+        ),
+        React.createElement("div", { className: "grid grid-cols-2 gap-3 mb-3" },
+          React.createElement("div", null,
+            React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Start Date *"),
+            React.createElement("input", { type: "date", className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-400", value: form.startDate, onChange: e => { const d = e.target.value; setForm(f => ({ ...f, startDate: d, endDate: (!f.endDate || f.endDate < d) ? d : f.endDate })); } })
+          ),
+          React.createElement("div", null,
+            React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "End Date"),
+            React.createElement("input", { type: "date", className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-400", value: form.endDate || form.startDate, onChange: e => setForm({ ...form, endDate: e.target.value }) })
+          )
+        ),
+        React.createElement("div", { className: "mb-3" },
+          React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Team Attending"),
+          React.createElement("div", { className: "flex flex-wrap gap-1.5 mt-1" },
+            TEAM_ROSTER.map(name => {
+              const sel = (form.attendees || []).includes(name);
+              return React.createElement("button", { key: name, type: "button", onClick: () => toggleAttendee(name), className: "text-xs px-2.5 py-1 rounded-full border font-medium transition-all", style: sel ? { background: "#2080BD", borderColor: "#2080BD", color: "#fff" } : { background: "#f8fafc", borderColor: "#e2e8f0", color: "#64748b" } }, name);
+            })
+          )
+        ),
+        React.createElement("div", { className: "mb-3 flex items-center gap-2 cursor-pointer" },
+          React.createElement("input", { type: "checkbox", id: "gcalAvail", checked: !!form.clientAvailability, onChange: e => setForm({ ...form, clientAvailability: e.target.checked }), className: "w-4 h-4", style: { accentColor: "#2080BD" } }),
+          React.createElement("label", { htmlFor: "gcalAvail", className: "text-sm text-gray-600 cursor-pointer" }, "\u23F3 Mark as client availability window (not yet confirmed)")
+        ),
+        React.createElement("div", { className: "mb-4" },
+          React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Notes"),
+          React.createElement("textarea", { className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-400 resize-none", rows: 2, placeholder: "Meeting agenda, key contacts, travel details\u2026", value: form.notes || "", onChange: e => setForm({ ...form, notes: e.target.value }) })
+        ),
+        React.createElement("div", { className: "flex gap-2 justify-between" },
+          editingEvent ? React.createElement("button", { onClick: deleteEvent, className: "text-sm px-3 py-2 rounded-xl font-medium border", style: { color: "#dc2626", borderColor: "#fecaca", background: "#fff5f5" } }, "Delete") : React.createElement("div"),
+          React.createElement("div", { className: "flex gap-2" },
+            React.createElement("button", { onClick: () => setShowModal(false), className: "text-sm px-4 py-2 rounded-xl border border-gray-200 font-medium text-gray-600 hover:bg-gray-50" }, "Cancel"),
+            React.createElement("button", { onClick: saveEvent, disabled: !form.type || !form.startDate || !form.city, className: "text-sm px-4 py-2 rounded-xl font-semibold text-white", style: { background: form.type && form.startDate && form.city ? "#2080BD" : "#94a3b8" } }, "Save Event")
+          )
+        )
+      )
+    );
+    const calView = React.createElement("div", null,
+      React.createElement("div", { className: "flex items-center justify-between mb-4" },
+        React.createElement("button", { onClick: prevMonth, className: "w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500 text-xl font-bold" }, "\u2039"),
+        React.createElement("span", { className: "text-lg font-bold text-gray-800" }, MONTH_NAMES[curMonth] + " " + curYear),
+        React.createElement("button", { onClick: nextMonth, className: "w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500 text-xl font-bold" }, "\u203A")
+      ),
+      React.createElement("div", { className: "grid grid-cols-7 mb-1" },
+        ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => React.createElement("div", { key: d, className: "text-xs font-semibold text-gray-400 text-center py-1" }, d))
+      ),
+      React.createElement("div", { className: "grid grid-cols-7 gap-1" },
+        calGrid.map((d, i) => {
+          if (!d) return React.createElement("div", { key: "e" + i, className: "min-h-[80px]" });
+          const dayEvents = eventsOnDay(curYear, curMonth, d);
+          const isTod = d === today.getDate() && curMonth === today.getMonth() && curYear === today.getFullYear();
+          return React.createElement("div", { key: d, onClick: () => openAdd(d), className: "min-h-[80px] rounded-xl p-1.5 cursor-pointer border transition-all hover:shadow-sm", style: { background: isTod ? "#e0f0ff" : "#fafafa", borderColor: isTod ? "#2080BD" : "#f1f5f9" } },
+            React.createElement("div", { className: "text-xs font-bold mb-1 text-right pr-0.5", style: { color: isTod ? "#2080BD" : "#9ca3af" } }, d),
+            dayEvents.slice(0, 3).map(ev => {
+              const ts = TYPE_STYLE[ev.type] || TYPE_STYLE["Other"];
+              const lbl = ev.clientAvailability ? ("\u23F3 " + (clientName(ev.clientId) || "Avail")) : (clientName(ev.clientId) || ev.type);
+              return React.createElement("div", { key: ev.id, onClick: (e) => openEdit(ev, e), title: (clientName(ev.clientId) || ev.type) + " \u2014 " + (ev.city || "") + "\n" + (ev.attendees||[]).join(", "), className: "text-xs rounded px-1 py-0.5 mb-0.5 truncate font-medium cursor-pointer hover:opacity-80", style: { background: ev.clientAvailability ? "#d1fae5" : ts.bg, borderLeft: "3px solid " + (ev.clientAvailability ? "#059669" : ts.border), color: ev.clientAvailability ? "#065f46" : ts.text } }, lbl);
+            }),
+            dayEvents.length > 3 && React.createElement("div", { className: "text-xs text-gray-400 pl-0.5" }, "+" + (dayEvents.length - 3) + " more")
+          );
+        })
+      )
+    );
+    const cityView = Object.keys(cityGroups).length === 0
+      ? React.createElement("div", { className: "text-center py-16 text-gray-400" },
+          React.createElement("div", { className: "text-5xl mb-3" }, "\uD83D\uDDFA\uFE0F"),
+          React.createElement("div", { className: "text-base font-semibold mb-1" }, "No upcoming events"),
+          React.createElement("p", { className: "text-sm" }, "Add events to see them grouped by city for travel planning.")
+        )
+      : React.createElement("div", null,
+          Object.entries(cityGroups).sort(([,a],[,b]) => a[0].startDate.localeCompare(b[0].startDate)).map(([city, evs]) =>
+            React.createElement("div", { key: city, className: "mb-6" },
+              React.createElement("div", { className: "flex items-center gap-2 mb-3 pb-2 border-b border-gray-100" },
+                React.createElement("span", { className: "text-lg" }, "\uD83D\uDCCD"),
+                React.createElement("h3", { className: "text-base font-bold text-gray-800" }, city),
+                React.createElement("span", { className: "text-xs text-gray-400 font-medium" }, evs.length + " event" + (evs.length > 1 ? "s" : "")),
+                React.createElement("button", { onClick: () => { setForm({ ...EMPTY_FORM, city }); setEditingEvent(null); setShowModal(true); }, className: "ml-auto text-xs px-3 py-1 rounded-lg font-semibold", style: { background: "#e0f0ff", color: "#2080BD" } }, "+ Add to " + city)
+              ),
+              evs.map(ev => {
+                const ts = TYPE_STYLE[ev.type] || TYPE_STYLE["Other"];
+                const cName = clientName(ev.clientId);
+                return React.createElement("div", { key: ev.id, className: "flex items-stretch gap-3 bg-white rounded-xl p-4 mb-2 border border-gray-100 shadow-sm hover:shadow-md transition-shadow" },
+                  React.createElement("div", { className: "w-1 rounded-full flex-shrink-0", style: { background: ev.clientAvailability ? "#059669" : ts.border } }),
+                  React.createElement("div", { className: "flex-1 min-w-0" },
+                    React.createElement("div", { className: "flex items-start justify-between gap-2" },
+                      React.createElement("div", null,
+                        React.createElement("div", { className: "flex items-center gap-2 flex-wrap mb-1" },
+                          React.createElement("span", { className: "text-xs font-bold px-2 py-0.5 rounded-full", style: { background: ev.clientAvailability ? "#d1fae5" : ts.bg, color: ev.clientAvailability ? "#065f46" : ts.text } }, ev.clientAvailability ? "\u23F3 Availability Window" : ev.type),
+                          cName && React.createElement("button", { onClick: () => onSelectClient(ev.clientId), className: "text-xs font-semibold hover:underline", style: { color: "#2080BD" } }, cName)
+                        ),
+                        React.createElement("div", { className: "text-xs text-gray-500" }, ev.endDate && ev.endDate !== ev.startDate ? fmt(ev.startDate) + " \u2013 " + fmt(ev.endDate) : fmt(ev.startDate))
+                      ),
+                      React.createElement("button", { onClick: (e) => openEdit(ev, e), className: "text-sm text-gray-300 hover:text-gray-500 flex-shrink-0 transition-colors" }, "\u270F\uFE0F")
+                    ),
+                    (ev.attendees || []).length > 0 && React.createElement("div", { className: "flex flex-wrap gap-1 mt-2" },
+                      (ev.attendees || []).map(a => React.createElement("span", { key: a, className: "text-xs px-2 py-0.5 rounded-full font-medium", style: { background: "#f1f5f9", color: "#475569" } }, a))
+                    ),
+                    ev.notes && React.createElement("div", { className: "text-xs text-gray-400 mt-1.5 italic" }, ev.notes)
+                  )
+                );
+              })
+            )
+          )
+        );
+    return React.createElement("div", { className: "p-6 max-w-5xl mx-auto" },
+      React.createElement("div", { className: "flex items-start justify-between mb-6" },
+        React.createElement("div", null,
+          React.createElement("h1", { className: "text-2xl font-bold text-gray-800" }, "\uD83D\uDCC5 Global Calendar"),
+          React.createElement("p", { className: "text-sm text-gray-500 mt-0.5" }, "Coordinate team travel, QBRs, and client visits across the portfolio")
+        ),
+        React.createElement("button", { onClick: () => openAdd(null), className: "flex items-center gap-2 text-sm font-semibold text-white px-4 py-2 rounded-xl shadow-sm hover:shadow-md transition-all", style: { background: "#2080BD" } }, "\uFF0B Add Event")
+      ),
+      React.createElement("div", { className: "flex items-center justify-between mb-5" },
+        React.createElement("div", { className: "flex gap-1 bg-gray-100 rounded-xl p-1" },
+          [["calendar","\uD83D\uDCC5 Calendar"],["cityplanner","\uD83D\uDCCD City Planner"]].map(([id, lbl]) =>
+            React.createElement("button", { key: id, onClick: () => setTab(id), className: "text-sm font-semibold px-4 py-1.5 rounded-lg transition-all", style: tab === id ? { background: "#fff", color: "#2080BD", boxShadow: "0 1px 4px rgba(0,0,0,0.1)" } : { color: "#64748b" } }, lbl)
+          )
+        ),
+        tab === "calendar" && React.createElement("div", { className: "text-xs text-gray-400" }, "Click any day to add an event")
+      ),
+      tab === "calendar" && React.createElement("div", { className: "flex flex-wrap gap-1.5 mb-4" },
+        Object.entries(TYPE_STYLE).map(([type, s]) =>
+          React.createElement("span", { key: type, className: "text-xs font-medium px-2 py-0.5 rounded-full border", style: { background: s.bg, borderColor: s.border, color: s.text } }, type)
+        ),
+        React.createElement("span", { className: "text-xs font-medium px-2 py-0.5 rounded-full border", style: { background: "#d1fae5", borderColor: "#059669", color: "#065f46" } }, "\u23F3 Availability")
+      ),
+      React.createElement("div", { className: "bg-white rounded-2xl border border-gray-100 shadow-sm p-4" },
+        tab === "calendar" ? calView : cityView
+      ),
+      modalEl
+    );
+  }
+
   function App() {
     var _a, _b, _c, _d, _e, _f, _g, _h, _i;
     const [session, setSession] = useState(null);
@@ -4596,6 +4816,7 @@ var _unused = (() => {
     const [oppBackView, setOppBackView] = useState("clientDetail");
     const [platformFilter, setPlatformFilter] = useState("all");
     const [teamGoals, setTeamGoals] = useState({ fy27ARR: null, goalHistory: {} });
+    const [calendarEvents, setCalendarEvents] = useState([]);
     const [modal, setModal] = useState(null);
     const [sidebarSearch, setSidebarSearch] = useState("");
     const [saveMsg, setSaveMsg] = useState("");
@@ -4691,6 +4912,7 @@ var _unused = (() => {
           if (state[DB_KEY_OPPS]) setOpps(state[DB_KEY_OPPS].map(sanitizeOpp));
           if (state[DB_KEY_RELS]) setRels(state[DB_KEY_RELS]);
           if (state[DB_KEY_GOALS]) setTeamGoals(state[DB_KEY_GOALS]);
+          if (state[DB_KEY_CALENDAR]) setCalendarEvents(state[DB_KEY_CALENDAR]);
         } else {
           const local = loadDB();
           setClients(local.clients);
@@ -4752,6 +4974,13 @@ var _unused = (() => {
         setTeamGoals((prev) => ({ ...prev, goalHistory: history }));
       }
     }, [dbLoaded]);
+    useEffect(() => {
+      if (!dbLoaded) return;
+      saveToSupabase(DB_KEY_CALENDAR, calendarEvents);
+    }, [calendarEvents]);
+    const addCalendarEvent = (ev) => setCalendarEvents(prev => [...prev, ev]);
+    const updateCalendarEvent = (ev) => setCalendarEvents(prev => prev.map(e => e.id === ev.id ? ev : e));
+    const deleteCalendarEvent = (id) => setCalendarEvents(prev => prev.filter(e => e.id !== id));
     const updateTeamGoals = (goals) => {
       const history = { ...(teamGoals.goalHistory || {}), ...(goals.goalHistory || {}) };
       if (goals.fy27ARR != null) history["FY27"] = { target: goals.fy27ARR, updatedAt: new Date().toISOString() };
@@ -4941,7 +5170,7 @@ var _unused = (() => {
       },
       /* @__PURE__ */ React.createElement(HealthDot, { health: getCurrentHealth(c), size: 20 }),
       /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" }, /* @__PURE__ */ React.createElement("div", { className: "text-white text-xs font-medium truncate" }, c.name), /* @__PURE__ */ React.createElement("div", { className: "text-slate-400 text-xs" }, c.platform === "inspire" ? "\u2726 Inspire" : "\u25C8 Capillary"))
-    )))), /* @__PURE__ */ React.createElement("div", { className: "px-3 flex-1 overflow-y-auto pb-4 mt-2", style: { scrollbarWidth: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "nav-section" }, "Main"), nav("home", "Overview", "\u{1F3E0}"), nav("clients", "All Clients", "\u{1F465}", activeCount, "all"), nav("allOpps", "All Opportunities", "\u{1F4BC}"), nav("nps", "NPS Overview", "\u{1F4CA}"), nav("goals", "Farming Goals", "\u{1F3AF}"), nav("whitespace", "Whitespace", "\u{1F680}"), nav("renewals", "Renewals", "\u{1F4C5}", (() => {
+    )))), /* @__PURE__ */ React.createElement("div", { className: "px-3 flex-1 overflow-y-auto pb-4 mt-2", style: { scrollbarWidth: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "nav-section" }, "Main"), nav("home", "Overview", "\u{1F3E0}"), nav("clients", "All Clients", "\u{1F465}", activeCount, "all"), nav("allOpps", "All Opportunities", "\u{1F4BC}"), nav("nps", "NPS Overview", "\u{1F4CA}"), nav("goals", "Farming Goals", "\u{1F3AF}"), nav("whitespace", "Whitespace", "\u{1F680}"), nav("calendar", "Global Calendar", "\uD83D\uDDFA\uFE0F"), nav("renewals", "Renewals", "\u{1F4C5}", (() => {
       const active = clients.filter((c) => !c.archived);
       return active.filter((c) => renewalUrgency(c.nextRenewal) === "overdue" || renewalUrgency(c.nextRenewal) === "critical").length || void 0;
     })()), nav("reports", "Reports", "\u{1F4CB}"), /* @__PURE__ */ React.createElement("div", { className: "nav-section" }, "Account Leads"), nav("accountLeads", "Lead Boards", "\u{1F464}", leadCount), canEdit && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "nav-section" }, "Actions"), /* @__PURE__ */ React.createElement("div", { className: "nav-item", onClick: () => setModal("addClient") }, /* @__PURE__ */ React.createElement("span", null, "\u2795"), /* @__PURE__ */ React.createElement("span", null, "Add Client")), /* @__PURE__ */ React.createElement("div", { className: "nav-item", onClick: () => setModal("addOpp") }, /* @__PURE__ */ React.createElement("span", null, "\u{1F4CB}"), /* @__PURE__ */ React.createElement("span", null, "Add Opportunity"))), isRealAdmin && React.createElement("div", { className: "mx-2 mb-2 mt-1 p-2 rounded-lg", style: { background: viewAsRole ? "#7c3aed22" : "#2080BD15", border: viewAsRole ? "1px solid #7c3aed55" : "1px solid transparent" } },
@@ -4960,7 +5189,7 @@ var _unused = (() => {
         className: "text-xs text-slate-500 hover:text-red-400 transition-colors shrink-0 font-semibold"
       },
       "Sign out"
-    )), /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between" }, /* @__PURE__ */ React.createElement("div", { className: "text-xs text-slate-600" }, "\xA9 Capillary Technologies"), saveMsg && /* @__PURE__ */ React.createElement("div", { className: "text-xs text-green-500 font-semibold" }, saveMsg)))), /* @__PURE__ */ React.createElement("div", { className: "main flex-1 overflow-y-auto" }, view === "home" && /* @__PURE__ */ React.createElement(HomeView, { clients, opps, onSelectClient: goToClient, platformFilter, onSetPlatformFilter: setPlatformFilter, onGoToRenewals: () => setView("renewals"), teamGoals, onGoToGoals: () => setView("goals"), onGoToWhitespace: () => setView("whitespace") }), view === "clients" && /* @__PURE__ */ React.createElement(ClientsView, { clients, opps, onSelectClient: goToClient, platformFilter, onSetPlatformFilter: setPlatformFilter }), view === "allOpps" && /* @__PURE__ */ React.createElement(AllOppsView, { clients, opps, onSelectClient: goToClient, onSelectOpp: (id) => goToOpp(id, "allOpps"), onUpdateOpp: updateOpp }), view === "nps" && /* @__PURE__ */ React.createElement(NPSErrorBoundary, null, /* @__PURE__ */ React.createElement(NPSView, { clients, onSelectClient: goToClient, onUpdateClient: updateClient, platformFilter, onSetPlatformFilter: setPlatformFilter })), view === "goals" && /* @__PURE__ */ React.createElement(GoalsView, { clients, opps, onSelectClient: goToClient, onUpdateClient: updateClient, platformFilter, onSetPlatformFilter: setPlatformFilter, teamGoals, onUpdateTeamGoals: updateTeamGoals }), view === "renewals" && /* @__PURE__ */ React.createElement(RenewalsView, { clients, onSelectClient: goToClient }), view === "reports" && /* @__PURE__ */ React.createElement(ReportsView, { clients, opps }), view === "whitespace" && /* @__PURE__ */ React.createElement(WhitespaceView, { clients, onSelectClient: goToClient, onUpdateClient: updateClient }), view === "accountLeads" && /* @__PURE__ */ React.createElement(AccountLeadView, { clients, opps, onSelectClient: goToClient }), view === "admin" && isRealAdmin && !viewAsRole && /* @__PURE__ */ React.createElement(AdminView, { currentUserEmail: (_i = session == null ? void 0 : session.user) == null ? void 0 : _i.email }), view === "archived" && /* @__PURE__ */ React.createElement(ArchivedView, { clients, onSelectClient: goToClient, onUnarchive: unarchiveClient }), view === "faq" && /* @__PURE__ */ React.createElement(FAQView, null), view === "clientDetail" && selectedClient && /* @__PURE__ */ React.createElement(
+    )), /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between" }, /* @__PURE__ */ React.createElement("div", { className: "text-xs text-slate-600" }, "\xA9 Capillary Technologies"), saveMsg && /* @__PURE__ */ React.createElement("div", { className: "text-xs text-green-500 font-semibold" }, saveMsg)))), /* @__PURE__ */ React.createElement("div", { className: "main flex-1 overflow-y-auto" }, view === "home" && /* @__PURE__ */ React.createElement(HomeView, { clients, opps, onSelectClient: goToClient, platformFilter, onSetPlatformFilter: setPlatformFilter, onGoToRenewals: () => setView("renewals"), teamGoals, onGoToGoals: () => setView("goals"), onGoToWhitespace: () => setView("whitespace") }), view === "clients" && /* @__PURE__ */ React.createElement(ClientsView, { clients, opps, onSelectClient: goToClient, platformFilter, onSetPlatformFilter: setPlatformFilter }), view === "allOpps" && /* @__PURE__ */ React.createElement(AllOppsView, { clients, opps, onSelectClient: goToClient, onSelectOpp: (id) => goToOpp(id, "allOpps"), onUpdateOpp: updateOpp }), view === "nps" && /* @__PURE__ */ React.createElement(NPSErrorBoundary, null, /* @__PURE__ */ React.createElement(NPSView, { clients, onSelectClient: goToClient, onUpdateClient: updateClient, platformFilter, onSetPlatformFilter: setPlatformFilter })), view === "goals" && /* @__PURE__ */ React.createElement(GoalsView, { clients, opps, onSelectClient: goToClient, onUpdateClient: updateClient, platformFilter, onSetPlatformFilter: setPlatformFilter, teamGoals, onUpdateTeamGoals: updateTeamGoals }), view === "calendar" && /* @__PURE__ */ React.createElement(GlobalCalendarView, { clients, calendarEvents, onAddEvent: addCalendarEvent, onUpdateEvent: updateCalendarEvent, onDeleteEvent: deleteCalendarEvent, onSelectClient: goToClient }), view === "renewals" && /* @__PURE__ */ React.createElement(RenewalsView, { clients, onSelectClient: goToClient }), view === "reports" && /* @__PURE__ */ React.createElement(ReportsView, { clients, opps }), view === "whitespace" && /* @__PURE__ */ React.createElement(WhitespaceView, { clients, onSelectClient: goToClient, onUpdateClient: updateClient }), view === "accountLeads" && /* @__PURE__ */ React.createElement(AccountLeadView, { clients, opps, onSelectClient: goToClient }), view === "admin" && isRealAdmin && !viewAsRole && /* @__PURE__ */ React.createElement(AdminView, { currentUserEmail: (_i = session == null ? void 0 : session.user) == null ? void 0 : _i.email }), view === "archived" && /* @__PURE__ */ React.createElement(ArchivedView, { clients, onSelectClient: goToClient, onUnarchive: unarchiveClient }), view === "faq" && /* @__PURE__ */ React.createElement(FAQView, null), view === "clientDetail" && selectedClient && /* @__PURE__ */ React.createElement(
       ClientDetailView,
       {
         client: selectedClient,
