@@ -1097,7 +1097,7 @@ var _unused = (() => {
       ));
     })));
   }
-  function ClientDetailView({ client, opps, rels, onBack, onUpdateClient, onUpdateRels, onSelectOpp, onAddOpp, onRemoveOpp, onArchive }) {
+  function ClientDetailView({ client, opps, rels, onBack, onUpdateClient, onUpdateRels, onSelectOpp, onAddOpp, onRemoveOpp, onArchive, calendarEvents, onAddCalendarEvent, onUpdateCalendarEvent, onDeleteCalendarEvent }) {
     const { canEdit: globalCanEdit, canEditClient } = useRole();
     const canEdit = canEditClient ? canEditClient(client.id) : globalCanEdit;
     const [editing, setEditing] = useState(false);
@@ -1107,10 +1107,17 @@ var _unused = (() => {
     const [showClosedClient, setShowClosedClient] = useState(false);
     const [pipelineFilter, setPipelineFilter] = useState("all");
     const [activeTab, setActiveTab] = useState("overview");
+    const [showVisitModal, setShowVisitModal] = useState(false);
+    const [editingVisit, setEditingVisit] = useState(null);
+    const EMPTY_VISIT_FORM = { clientId: client.id, type: "F2F Meeting", city: "", startDate: "", endDate: "", attendees: [], notes: "", clientAvailability: false };
+    const [visitForm, setVisitForm] = useState(EMPTY_VISIT_FORM);
     useEffect(() => {
       setForm({ ...client });
       setEditing(false);
       setActiveTab("overview");
+      setShowVisitModal(false);
+      setEditingVisit(null);
+      setVisitForm({ ...EMPTY_VISIT_FORM, clientId: client.id });
     }, [client.id]);
     const cycleHealth = (m) => {
       const cycle = { null: "Green", Green: "Yellow", Yellow: "Red", Red: null };
@@ -1123,6 +1130,76 @@ var _unused = (() => {
       setForm(updated);
       onUpdateClient(updated);
     };
+    const todayStr2 = new Date().toISOString().split("T")[0];
+    const clientVisits = (calendarEvents || []).filter(ev => ev.clientId === client.id).sort((a,b) => a.startDate.localeCompare(b.startDate));
+    const upcomingVisits = clientVisits.filter(ev => (ev.endDate || ev.startDate) >= todayStr2);
+    const pastVisits = clientVisits.filter(ev => (ev.endDate || ev.startDate) < todayStr2);
+    const VT_STYLE = { "QBR": { bg: "#f3e8ff", border: "#7c3aed", text: "#6d28d9" }, "EBR": { bg: "#fce7f3", border: "#db2777", text: "#be185d" }, "F2F Meeting": { bg: "#dbeafe", border: "#2563eb", text: "#1d4ed8" }, "Executive Visit": { bg: "#fef3c7", border: "#d97706", text: "#b45309" }, "Client Onsite": { bg: "#d1fae5", border: "#059669", text: "#065f46" }, "Sales Meeting": { bg: "#e0f2fe", border: "#0284c7", text: "#0369a1" }, "Other": { bg: "#f1f5f9", border: "#64748b", text: "#475569" } };
+    const fmtVD = (ds) => { if (!ds) return ""; const [y,m,d] = ds.split("-"); const mn = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; return mn[parseInt(m)-1] + " " + parseInt(d) + ", " + y; };
+    const VISIT_TYPES = ["QBR", "EBR", "F2F Meeting", "Executive Visit", "Client Onsite", "Sales Meeting", "Other"];
+    const toggleVisitAttendee = (name) => setVisitForm(f => { const curr = f.attendees || []; return { ...f, attendees: curr.includes(name) ? curr.filter(x => x !== name) : [...curr, name] }; });
+    const saveVisit = () => {
+      if (!visitForm.type || !visitForm.startDate || !visitForm.city) return;
+      const ev = { ...visitForm, clientId: client.id, id: editingVisit ? editingVisit.id : Date.now().toString() };
+      if (editingVisit && onUpdateCalendarEvent) onUpdateCalendarEvent(ev); else if (onAddCalendarEvent) onAddCalendarEvent(ev);
+      setShowVisitModal(false); setEditingVisit(null); setVisitForm({ ...EMPTY_VISIT_FORM, clientId: client.id });
+    };
+    const deleteVisit = () => { if (!editingVisit || !onDeleteCalendarEvent) return; onDeleteCalendarEvent(editingVisit.id); setShowVisitModal(false); setEditingVisit(null); setVisitForm({ ...EMPTY_VISIT_FORM, clientId: client.id }); };
+    const visitModalEl = showVisitModal && React.createElement("div", { className: "fixed inset-0 z-50 flex items-center justify-center", style: { background: "rgba(0,0,0,0.5)" }, onClick: (e) => { if (e.target === e.currentTarget) setShowVisitModal(false); } },
+      React.createElement("div", { className: "bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg mx-4", style: { maxHeight: "90vh", overflowY: "auto" } },
+        React.createElement("div", { className: "flex items-center justify-between mb-4" },
+          React.createElement("div", null,
+            React.createElement("h3", { className: "text-lg font-bold text-gray-800" }, editingVisit ? "Edit Visit" : "\uD83D\uDCC5 Schedule Visit"),
+            React.createElement("p", { className: "text-xs text-gray-400 mt-0.5" }, client.name)
+          ),
+          React.createElement("button", { onClick: () => setShowVisitModal(false), className: "text-gray-400 hover:text-gray-600 text-xl font-bold leading-none" }, "\xD7")
+        ),
+        React.createElement("div", { className: "mb-3" },
+          React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Event Type"),
+          React.createElement("select", { className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-400", value: visitForm.type, onChange: e => setVisitForm({ ...visitForm, type: e.target.value }) },
+            VISIT_TYPES.map(t => React.createElement("option", { key: t }, t))
+          )
+        ),
+        React.createElement("div", { className: "mb-3" },
+          React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "City / Location *"),
+          React.createElement("input", { type: "text", className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-400", placeholder: "e.g. Chicago, IL", value: visitForm.city, onChange: e => setVisitForm({ ...visitForm, city: e.target.value }) })
+        ),
+        React.createElement("div", { className: "grid grid-cols-2 gap-3 mb-3" },
+          React.createElement("div", null,
+            React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Start Date *"),
+            React.createElement("input", { type: "date", className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-400", value: visitForm.startDate, onChange: e => { const d = e.target.value; setVisitForm(f => ({ ...f, startDate: d, endDate: (!f.endDate || f.endDate < d) ? d : f.endDate })); } })
+          ),
+          React.createElement("div", null,
+            React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "End Date"),
+            React.createElement("input", { type: "date", className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-400", value: visitForm.endDate || visitForm.startDate, onChange: e => setVisitForm({ ...visitForm, endDate: e.target.value }) })
+          )
+        ),
+        React.createElement("div", { className: "mb-3" },
+          React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Team Attending"),
+          React.createElement("div", { className: "flex flex-wrap gap-1.5 mt-1" },
+            TEAM_ROSTER.map(name => {
+              const sel = (visitForm.attendees || []).includes(name);
+              return React.createElement("button", { key: name, type: "button", onClick: () => toggleVisitAttendee(name), className: "text-xs px-2.5 py-1 rounded-full border font-medium transition-all", style: sel ? { background: "#2080BD", borderColor: "#2080BD", color: "#fff" } : { background: "#f8fafc", borderColor: "#e2e8f0", color: "#64748b" } }, name);
+            })
+          )
+        ),
+        React.createElement("div", { className: "mb-3 flex items-center gap-2" },
+          React.createElement("input", { type: "checkbox", id: "visitAvail", checked: !!visitForm.clientAvailability, onChange: e => setVisitForm({ ...visitForm, clientAvailability: e.target.checked }), className: "w-4 h-4", style: { accentColor: "#2080BD" } }),
+          React.createElement("label", { htmlFor: "visitAvail", className: "text-sm text-gray-600 cursor-pointer" }, "\u23F3 Mark as client availability window (not yet confirmed)")
+        ),
+        React.createElement("div", { className: "mb-4" },
+          React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Notes"),
+          React.createElement("textarea", { className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-400 resize-none", rows: 2, placeholder: "Agenda, key contacts, travel details\u2026", value: visitForm.notes || "", onChange: e => setVisitForm({ ...visitForm, notes: e.target.value }) })
+        ),
+        React.createElement("div", { className: "flex gap-2 justify-between" },
+          editingVisit ? React.createElement("button", { onClick: deleteVisit, className: "text-sm px-3 py-2 rounded-xl font-medium border", style: { color: "#dc2626", borderColor: "#fecaca", background: "#fff5f5" } }, "Delete") : React.createElement("div"),
+          React.createElement("div", { className: "flex gap-2" },
+            React.createElement("button", { onClick: () => setShowVisitModal(false), className: "text-sm px-4 py-2 rounded-xl border border-gray-200 font-medium text-gray-600 hover:bg-gray-50" }, "Cancel"),
+            React.createElement("button", { onClick: saveVisit, disabled: !visitForm.type || !visitForm.startDate || !visitForm.city, className: "text-sm px-4 py-2 rounded-xl font-semibold text-white", style: { background: visitForm.type && visitForm.startDate && visitForm.city ? "#2080BD" : "#94a3b8" } }, "Save Visit")
+          )
+        )
+      )
+    );
     const clientOpps = opps.filter((o) => o.clientId === client.id);
     const filteredOpps = clientOpps.filter((o) => {
       if (oppFilter !== "all" && o.status !== oppFilter) return false;
@@ -1165,7 +1242,7 @@ var _unused = (() => {
     return /* @__PURE__ */ React.createElement("div", { className: "p-6 space-y-5" }, /* @__PURE__ */ React.createElement("button", { onClick: onBack, className: "text-sm font-semibold flex items-center gap-1", style: { color: "#2080BD" } }, "\u2190 Back to Clients"), /* @__PURE__ */ React.createElement("div", { className: "card" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-start justify-between gap-4 flex-wrap" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-start gap-4" }, /* @__PURE__ */ React.createElement(HealthDot, { health: getCurrentHealth(client), size: 52 }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 flex-wrap" }, /* @__PURE__ */ React.createElement("h1", { className: "text-2xl font-bold text-gray-900" }, client.name), /* @__PURE__ */ React.createElement(PlatformBadge, { platform: client.platform }), /* @__PURE__ */ React.createElement(SegmentBadge, { segment: client.segment }), client.churning && /* @__PURE__ */ React.createElement("span", { className: "text-xs font-bold px-2.5 py-1 rounded-full border", style: { background: "#FEE2E2", color: "#991B1B", borderColor: "#FCA5A5", whiteSpace: "nowrap" } }, "\u26A0\uFE0F Churning"), client.archived && /* @__PURE__ */ React.createElement("span", { className: "archived-badge" }, "Archived")), /* @__PURE__ */ React.createElement("div", { className: "flex gap-5 mt-2 flex-wrap" }, client.arr != null && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400" }, "ARR"), /* @__PURE__ */ React.createElement("div", { className: "text-lg font-bold", style: { color: "#2080BD" } }, fmt$(client.arr))), client.aop != null && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400" }, "AOP"), /* @__PURE__ */ React.createElement("div", { className: "text-lg font-bold text-purple-700" }, fmt$(client.aop))), client.forecast != null && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400" }, "Forecast"), /* @__PURE__ */ React.createElement("div", { className: "text-lg font-bold text-gray-800" }, fmt$(client.forecast)))))), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 flex-wrap" }, canEdit && (editing ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("button", { onClick: saveEdit, className: "btn-primary text-sm" }, "Save"), /* @__PURE__ */ React.createElement("button", { onClick: () => {
       setForm({ ...client });
       setEditing(false);
-    }, className: "btn-secondary text-sm" }, "Cancel")) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("button", { onClick: () => setEditing(true), className: "btn-secondary text-sm" }, "\u270F\uFE0F Edit"), /* @__PURE__ */ React.createElement("button", { onClick: onArchive, className: "btn-secondary text-sm text-amber-700" }, client.archived ? "\u21A9 Unarchive" : "\u{1F4E6} Archive")))))), /* @__PURE__ */ React.createElement("div", { className: "bg-gray-50 rounded-xl p-1.5 flex gap-2" }, tabs.map((t) => /* @__PURE__ */ React.createElement(
+    }, className: "btn-secondary text-sm" }, "Cancel")) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("button", { onClick: () => setEditing(true), className: "btn-secondary text-sm" }, "\u270F\uFE0F Edit"), /* @__PURE__ */ React.createElement("button", { onClick: onArchive, className: "btn-secondary text-sm text-amber-700" }, client.archived ? "\u21A9 Unarchive" : "\u{1F4E6} Archive"), React.createElement("button", { onClick: () => { setVisitForm({ ...EMPTY_VISIT_FORM, clientId: client.id }); setEditingVisit(null); setShowVisitModal(true); }, className: "btn-secondary text-sm font-semibold", style: { color: "#2080BD" } }, "\uD83D\uDCC5 Schedule Visit")))))), /* @__PURE__ */ React.createElement("div", { className: "bg-gray-50 rounded-xl p-1.5 flex gap-2" }, tabs.map((t) => /* @__PURE__ */ React.createElement(
       "button",
       {
         key: t.id,
@@ -1230,7 +1307,42 @@ var _unused = (() => {
         const firstOfYear = allMonths.findIndex((x) => x.startsWith(yr)) === i;
         return /* @__PURE__ */ React.createElement("div", { key: m, style: { width: 27, flexShrink: 0, textAlign: "left" } }, firstOfYear && /* @__PURE__ */ React.createElement("span", { className: "font-semibold", style: { color: "#64748b" } }, yr.slice(2)));
       })), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-300 mt-1" }, "Outlined blocks = current 5-month window"));
-    })(), /* @__PURE__ */ React.createElement("div", { className: "border-t border-gray-100 pt-4" }, /* @__PURE__ */ React.createElement("h4", { className: "text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3" }, "Pipeline Snapshot"), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-4 gap-3" }, /* @__PURE__ */ React.createElement("div", { className: "bg-blue-50 rounded-xl p-3 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "text-lg font-bold text-sky-800" }, clientOpps.filter((o) => !["Closed-Won", "Closed-Lost"].includes(o.status)).length), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-sky-600 mt-0.5" }, "Active Opps")), /* @__PURE__ */ React.createElement("div", { className: "bg-green-50 rounded-xl p-3 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "text-lg font-bold text-green-700" }, fmt$(wonValue)), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-green-500 mt-0.5" }, "Won FY27")), insOpps.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "bg-blue-50 rounded-xl p-3 text-center", style: { borderTop: "2px solid #3b82f6" } }, /* @__PURE__ */ React.createElement("div", { className: "text-lg font-bold text-sky-800" }, insOpps.length), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-sky-600 mt-0.5" }, "Inspire Opps")), capOpps.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "bg-purple-50 rounded-xl p-3 text-center", style: { borderTop: "2px solid #8b5cf6" } }, /* @__PURE__ */ React.createElement("div", { className: "text-lg font-bold text-purple-700" }, capOpps.length), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-purple-500 mt-0.5" }, "Cap. Opps")))))), activeTab === "relationships" && /* @__PURE__ */ React.createElement(RelationshipMapping, { clientName: client.name, relData: clientRels, onUpdate: handleRelsUpdate }), activeTab === "opportunities" && (() => {
+    })(), /* @__PURE__ */ React.createElement("div", { className: "border-t border-gray-100 pt-4" }, /* @__PURE__ */ React.createElement("h4", { className: "text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3" }, "Pipeline Snapshot"), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-4 gap-3" }, /* @__PURE__ */ React.createElement("div", { className: "bg-blue-50 rounded-xl p-3 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "text-lg font-bold text-sky-800" }, clientOpps.filter((o) => !["Closed-Won", "Closed-Lost"].includes(o.status)).length), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-sky-600 mt-0.5" }, "Active Opps")), /* @__PURE__ */ React.createElement("div", { className: "bg-green-50 rounded-xl p-3 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "text-lg font-bold text-green-700" }, fmt$(wonValue)), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-green-500 mt-0.5" }, "Won FY27")), insOpps.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "bg-blue-50 rounded-xl p-3 text-center", style: { borderTop: "2px solid #3b82f6" } }, /* @__PURE__ */ React.createElement("div", { className: "text-lg font-bold text-sky-800" }, insOpps.length), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-sky-600 mt-0.5" }, "Inspire Opps")), capOpps.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "bg-purple-50 rounded-xl p-3 text-center", style: { borderTop: "2px solid #8b5cf6" } }, /* @__PURE__ */ React.createElement("div", { className: "text-lg font-bold text-purple-700" }, capOpps.length), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-purple-500 mt-0.5" }, "Cap. Opps")))))), activeTab === "overview" && clientVisits.length > 0 && React.createElement("div", { className: "card" },
+  React.createElement("div", { className: "flex items-center justify-between mb-3" },
+    React.createElement("h3", { className: "font-semibold text-gray-700 text-sm" }, "\uD83D\uDCC5 Scheduled Visits (" + clientVisits.length + ")"),
+    React.createElement("button", { onClick: () => { setVisitForm({ ...EMPTY_VISIT_FORM, clientId: client.id }); setEditingVisit(null); setShowVisitModal(true); }, className: "text-xs px-3 py-1 rounded-lg font-semibold", style: { background: "#e0f0ff", color: "#2080BD" } }, "+ Add Visit")
+  ),
+  upcomingVisits.length > 0 && React.createElement("div", { className: "mb-3" },
+    React.createElement("div", { className: "text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2" }, "Upcoming"),
+    upcomingVisits.map(ev => {
+      const ts = VT_STYLE[ev.type] || VT_STYLE["Other"];
+      return React.createElement("div", { key: ev.id, onClick: () => { setVisitForm({ ...ev }); setEditingVisit(ev); setShowVisitModal(true); }, className: "flex items-center gap-3 p-2.5 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50 cursor-pointer transition-all mb-1.5" },
+        React.createElement("div", { className: "w-1 self-stretch rounded-full flex-shrink-0", style: { background: ev.clientAvailability ? "#059669" : ts.border } }),
+        React.createElement("div", { className: "flex-1 min-w-0" },
+          React.createElement("div", { className: "flex items-center gap-2 flex-wrap" },
+            React.createElement("span", { className: "text-xs font-bold px-2 py-0.5 rounded-full", style: { background: ev.clientAvailability ? "#d1fae5" : ts.bg, color: ev.clientAvailability ? "#065f46" : ts.text } }, ev.clientAvailability ? "\u23F3 Availability" : ev.type),
+            ev.city && React.createElement("span", { className: "text-xs text-gray-500" }, "\uD83D\uDCCD " + ev.city)
+          ),
+          React.createElement("div", { className: "text-xs text-gray-400 mt-0.5" }, ev.endDate && ev.endDate !== ev.startDate ? fmtVD(ev.startDate) + " \u2013 " + fmtVD(ev.endDate) : fmtVD(ev.startDate))
+        ),
+        (ev.attendees || []).length > 0 && React.createElement("div", { className: "text-xs text-gray-400 truncate max-w-32" }, (ev.attendees || []).join(", "))
+      );
+    })
+  ),
+  pastVisits.length > 0 && React.createElement("div", null,
+    React.createElement("div", { className: "text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2" }, "Past"),
+    pastVisits.slice(-3).reverse().map(ev => {
+      const ts = VT_STYLE[ev.type] || VT_STYLE["Other"];
+      return React.createElement("div", { key: ev.id, onClick: () => { setVisitForm({ ...ev }); setEditingVisit(ev); setShowVisitModal(true); }, className: "flex items-center gap-3 p-2.5 rounded-xl border border-gray-100 hover:bg-gray-50 cursor-pointer transition-all mb-1.5 opacity-60" },
+        React.createElement("div", { className: "w-1 self-stretch rounded-full flex-shrink-0", style: { background: ts.border } }),
+        React.createElement("div", { className: "flex-1 min-w-0" },
+          React.createElement("div", { className: "text-xs font-semibold", style: { color: ts.text } }, ev.type),
+          React.createElement("div", { className: "text-xs text-gray-400" }, ev.city ? "\uD83D\uDCCD " + ev.city + " \xB7 " : "", fmtVD(ev.startDate))
+        )
+      );
+    })
+  )
+), activeTab === "relationships" && /* @__PURE__ */ React.createElement(RelationshipMapping, { clientName: client.name, relData: clientRels, onUpdate: handleRelsUpdate }), activeTab === "opportunities" && (() => {
       const CLOSED = ["Closed-Won", "Closed-Lost"];
       const activeFiltered = filteredOpps.filter((o) => !CLOSED.includes(o.status));
       const closedFiltered = filteredOpps.filter((o) => CLOSED.includes(o.status));
@@ -1256,7 +1368,7 @@ var _unused = (() => {
         /* @__PURE__ */ React.createElement("span", null, showClosedClient ? "Hide" : "Show", " ", closedFiltered.length, " closed deal", closedFiltered.length !== 1 ? "s" : ""),
         /* @__PURE__ */ React.createElement("span", { className: "ml-auto" }, fmt$(closedFiltered.filter((o) => o.status === "Closed-Won").reduce((a, o) => a + (o.value || 0), 0)), " won")
       ), showClosedClient && /* @__PURE__ */ React.createElement("div", { className: "space-y-2 opacity-75" }, closedFiltered.map((o) => /* @__PURE__ */ React.createElement(OppRow, { key: o.id, o }))))));
-    })(), activeTab === "activity" && /* @__PURE__ */ React.createElement(CommentsSection, { comments: client.comments || [], onAdd: (text) => onUpdateClient({ ...client, comments: [...client.comments || [], { id: Date.now(), text, author: "You", date: (/* @__PURE__ */ new Date()).toLocaleDateString() }] }) }), activeTab === "meddicc" && /* @__PURE__ */ React.createElement(MEDDICCPanel, { client, onUpdateClient }));
+    })(), activeTab === "activity" && /* @__PURE__ */ React.createElement(CommentsSection, { comments: client.comments || [], onAdd: (text) => onUpdateClient({ ...client, comments: [...client.comments || [], { id: Date.now(), text, author: "You", date: (/* @__PURE__ */ new Date()).toLocaleDateString() }] }) }), activeTab === "meddicc" && /* @__PURE__ */ React.createElement(MEDDICCPanel, { client, onUpdateClient }), visitModalEl);
   }
 
   // Activity Type Colors
@@ -5210,7 +5322,11 @@ var _unused = (() => {
           } else {
             setArchiveModal(selectedClient);
           }
-        }
+        },
+        calendarEvents,
+        onAddCalendarEvent: addCalendarEvent,
+        onUpdateCalendarEvent: updateCalendarEvent,
+        onDeleteCalendarEvent: deleteCalendarEvent
       }
     ), view === "oppDetail" && selectedOpp && /* @__PURE__ */ React.createElement(OppDetailView, { opp: selectedOpp, client: oppClient, backView: oppBackView, onRemoveOpp: removeOpp, onBack: () => {
       setView(oppBackView);
