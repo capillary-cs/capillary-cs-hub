@@ -4173,8 +4173,9 @@ var _unused = (() => {
       if (cat.includes("cat 3") || cat.includes("new business") || cat.includes("brand") || cat.includes("market")) return "Cat 3";
       return "Other";
     };
-    const allOpps = opps || [];
     const allActive = clients.filter((c) => !c.archived);
+    const activeIds = new Set(allActive.map(c => c.id));
+    const allOpps = (opps || []).filter(o => activeIds.has(o.clientId));
     const filteredClients = useMemo(() => allActive.filter((c) => {
       var _a;
       if (filterSegment !== "all" && c.platform !== filterSegment) return false;
