@@ -4850,12 +4850,6 @@ var _unused = (() => {
           React.createElement("h3", { className: "text-lg font-bold text-gray-800" }, editingEvent ? "Edit Event" : "Add Calendar Event"),
           React.createElement("button", { onClick: () => setShowModal(false), className: "text-gray-400 hover:text-gray-600 text-xl font-bold leading-none" }, "\xD7")
         ),
-        React.createElement("div", { className: "mb-4" },
-          React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1.5" }, "Event Scope"),
-          React.createElement("div", { className: "flex gap-2" },
-            [["internal", "\uD83D\uDD12 Internal", "Team-only event"], ["general", "\uD83C\uDF10 General", "Client-facing event"]].map(function(item) { return React.createElement("button", { key: item[0], type: "button", onClick: function() { setForm(Object.assign({}, form, { eventScope: item[0] })); }, className: "flex-1 text-sm font-semibold py-2 rounded-xl border-2 transition-all text-center", style: form.eventScope === item[0] ? { borderColor: "#2080BD", background: "#e0f0ff", color: "#2080BD" } : { borderColor: "#e2e8f0", background: "#fafafa", color: "#64748b" } }, item[1]); })
-          )
-        ),
         React.createElement("div", { className: "mb-3" },
           React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Event Type"),
           React.createElement("select", { className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-400", value: form.type, onChange: e => setForm({ ...form, type: e.target.value }) },
@@ -4930,8 +4924,7 @@ var _unused = (() => {
               const evNames = getEventClientNames(ev);
               const lbl = ev.type === "Availability" ? ("\u23F3 " + (evNames[0] || "Avail")) : ev.type === "Conference" ? ("\uD83C\uDF10 " + (evNames.length > 0 ? evNames[0] + (evNames.length > 1 ? " +" + (evNames.length - 1) : "") : "Conference")) : (evNames[0] || ev.type);
               const isAvail = ev.type === "Availability" || ev.clientAvailability;
-              const scopePrefix = ev.eventScope === "internal" ? "\uD83D\uDD12 " : "";
-              return React.createElement("div", { key: ev.id, onClick: (e) => openEdit(ev, e), title: evNames.join(", ") + " \u2014 " + ev.type + " \u2014 " + (ev.city || "") + "\n" + (ev.attendees||[]).join(", "), className: "text-xs rounded px-1 py-0.5 mb-0.5 truncate font-medium cursor-pointer hover:opacity-80", style: { background: isAvail ? "#d1fae5" : ts.bg, borderLeft: "3px solid " + (isAvail ? "#059669" : ts.border), color: isAvail ? "#065f46" : ts.text } }, scopePrefix + lbl);
+              return React.createElement("div", { key: ev.id, onClick: (e) => openEdit(ev, e), title: evNames.join(", ") + " \u2014 " + ev.type + " \u2014 " + (ev.city || "") + "\n" + (ev.attendees||[]).join(", "), className: "text-xs rounded px-1 py-0.5 mb-0.5 truncate font-medium cursor-pointer hover:opacity-80", style: { background: isAvail ? "#d1fae5" : ts.bg, borderLeft: "3px solid " + (isAvail ? "#059669" : ts.border), color: isAvail ? "#065f46" : ts.text } }, lbl);
             }),
             dayEvents.length > 3 && React.createElement("div", { className: "text-xs text-gray-400 pl-0.5" }, "+" + (dayEvents.length - 3) + " more")
           );
@@ -4965,7 +4958,6 @@ var _unused = (() => {
                       React.createElement("div", null,
                         React.createElement("div", { className: "flex items-center gap-2 flex-wrap mb-1" },
                           React.createElement("span", { className: "text-xs font-bold px-2 py-0.5 rounded-full", style: { background: isAvail ? "#d1fae5" : ts.bg, color: isAvail ? "#065f46" : ts.text } }, isAvail ? "\u23F3 Availability" : ev.type),
-                          ev.eventScope === "internal" && React.createElement("span", { className: "text-xs font-semibold px-2 py-0.5 rounded-full", style: { background: "#fef3c7", color: "#92400e" } }, "\uD83D\uDD12 Internal"),
                           evCIds.map(cId => React.createElement("button", { key: cId, onClick: () => onSelectClient(cId), className: "text-xs font-semibold hover:underline", style: { color: "#2080BD" } }, clientName(cId)))
                         ),
                         React.createElement("div", { className: "text-xs text-gray-500" }, ev.endDate && ev.endDate !== ev.startDate ? fmt(ev.startDate) + " \u2013 " + fmt(ev.endDate) : fmt(ev.startDate))
@@ -4999,8 +4991,7 @@ var _unused = (() => {
         tab === "calendar" && React.createElement("div", { className: "text-xs text-gray-400" }, "Click any day to add an event")
       ),
       tab === "calendar" && React.createElement("div", { className: "flex flex-wrap gap-1.5 mb-4" },
-        EVENT_TYPES.map(type => { const s = TYPE_STYLE[type] || TYPE_STYLE["Other"]; return React.createElement("span", { key: type, className: "text-xs font-medium px-2 py-0.5 rounded-full border", style: { background: s.bg, borderColor: s.border, color: s.text } }, type); }),
-        React.createElement("span", { className: "text-xs font-medium px-2 py-0.5 rounded-full border", style: { background: "#fef3c7", borderColor: "#92400e", color: "#92400e" } }, "\uD83D\uDD12 Internal")
+        EVENT_TYPES.map(type => { const s = TYPE_STYLE[type] || TYPE_STYLE["Other"]; return React.createElement("span", { key: type, className: "text-xs font-medium px-2 py-0.5 rounded-full border", style: { background: s.bg, borderColor: s.border, color: s.text } }, type); })
       ),
       React.createElement("div", { className: "bg-white rounded-2xl border border-gray-100 shadow-sm p-4" },
         tab === "calendar" ? calView : cityView
