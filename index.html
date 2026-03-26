@@ -1137,9 +1137,9 @@ var _unused = (() => {
     const clientVisits = (calendarEvents || []).filter(ev => ev.clientId === client.id || (ev.clientIds && ev.clientIds.includes(client.id))).sort((a,b) => a.startDate.localeCompare(b.startDate));
     const upcomingVisits = clientVisits.filter(ev => (ev.endDate || ev.startDate) >= todayStr2);
     const pastVisits = clientVisits.filter(ev => (ev.endDate || ev.startDate) < todayStr2);
-    const VT_STYLE = { "QBR": { bg: "#f3e8ff", border: "#7c3aed", text: "#6d28d9" }, "Executive Visit": { bg: "#fef3c7", border: "#d97706", text: "#b45309" }, "Client Onsite": { bg: "#d1fae5", border: "#059669", text: "#065f46" }, "Availability": { bg: "#dbeafe", border: "#2563eb", text: "#1d4ed8" }, "Conference": { bg: "#fce7f3", border: "#db2777", text: "#be185d" }, "EBR": { bg: "#fce7f3", border: "#db2777", text: "#be185d" }, "F2F Meeting": { bg: "#dbeafe", border: "#2563eb", text: "#1d4ed8" }, "Sales Meeting": { bg: "#e0f2fe", border: "#0284c7", text: "#0369a1" }, "Other": { bg: "#f1f5f9", border: "#64748b", text: "#475569" } };
+    const VT_STYLE = { "QBR": { bg: "#f3e8ff", border: "#7c3aed", text: "#6d28d9" }, "Executive Visit": { bg: "#fef3c7", border: "#d97706", text: "#b45309" }, "Client Onsite": { bg: "#d1fae5", border: "#059669", text: "#065f46" }, "Availability": { bg: "#dbeafe", border: "#2563eb", text: "#1d4ed8" }, "Conference": { bg: "#fce7f3", border: "#db2777", text: "#be185d" }, "EBR": { bg: "#fce7f3", border: "#db2777", text: "#be185d" }, "F2F Meeting": { bg: "#dbeafe", border: "#2563eb", text: "#1d4ed8" }, "Sales Meeting": { bg: "#e0f2fe", border: "#0284c7", text: "#0369a1" }, "Capillary Event": { bg: "#e0f2fe", border: "#0891b2", text: "#0e7490" }, "Other": { bg: "#f1f5f9", border: "#64748b", text: "#475569" } };
     const fmtVD = (ds) => { if (!ds) return ""; const [y,m,d] = ds.split("-"); const mn = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; return mn[parseInt(m)-1] + " " + parseInt(d) + ", " + y; };
-    const VISIT_TYPES = ["QBR", "Executive Visit", "Client Onsite", "Availability", "Conference"];
+    const VISIT_TYPES = ["QBR", "Executive Visit", "Client Onsite", "Availability", "Conference", "Capillary Event"];
     const toggleVisitAttendee = (name) => setVisitForm(f => { const curr = f.attendees || []; return { ...f, attendees: curr.includes(name) ? curr.filter(x => x !== name) : [...curr, name] }; });
     const saveVisit = () => {
       if (!visitForm.type || !visitForm.startDate || !visitForm.city) return;
@@ -4785,7 +4785,7 @@ var _unused = (() => {
     const [editingEvent, setEditingEvent] = useState(null);
     const EMPTY_FORM = { clientId: "", clientIds: [], type: "QBR", city: "", startDate: "", endDate: "", attendees: [], notes: "", clientAvailability: false, eventScope: "general" };
     const [form, setForm] = useState(EMPTY_FORM);
-    const EVENT_TYPES = ["QBR", "Executive Visit", "Client Onsite", "Availability", "Conference"];
+    const EVENT_TYPES = ["QBR", "Executive Visit", "Client Onsite", "Availability", "Conference", "Capillary Event"];
     const TYPE_STYLE = {
       "QBR": { bg: "#f3e8ff", border: "#7c3aed", text: "#6d28d9" },
       "Executive Visit": { bg: "#fef3c7", border: "#d97706", text: "#b45309" },
@@ -4795,6 +4795,7 @@ var _unused = (() => {
       "EBR": { bg: "#fce7f3", border: "#db2777", text: "#be185d" },
       "F2F Meeting": { bg: "#dbeafe", border: "#2563eb", text: "#1d4ed8" },
       "Sales Meeting": { bg: "#e0f2fe", border: "#0284c7", text: "#0369a1" },
+      "Capillary Event": { bg: "#e0f2fe", border: "#0891b2", text: "#0e7490" },
       "Other": { bg: "#f1f5f9", border: "#64748b", text: "#475569" },
     };
     const getEventClientIds = (ev) => { if (ev.clientIds && ev.clientIds.length > 0) return ev.clientIds; if (ev.clientId) return [ev.clientId]; return []; };
