@@ -4614,7 +4614,7 @@ var _unused = (() => {
       sbClient.from("audit_log").select("*").order("created_at", { ascending: false }).limit(500)
         .then(function(res) { if (res.data) setLogs(res.data); done(); })
         .catch(done);
-      sbClient.from("login_events").select("*").order("created_at", { ascending: false }).limit(500)
+      sbClient.from("login_events").select("*").order("signed_in_at", { ascending: false }).limit(500)
         .then(function(res) { if (res.data) setLoginEvents(res.data); done(); })
         .catch(done);
     }, []);
@@ -4659,7 +4659,7 @@ var _unused = (() => {
       var ekey = ev.email || "unknown";
       if (!loginMap[ekey]) loginMap[ekey] = { email: ekey, name: ev.display_name || null, count: 0, last: null };
       loginMap[ekey].count++;
-      if (!loginMap[ekey].last || ev.created_at > loginMap[ekey].last) loginMap[ekey].last = ev.created_at;
+      if (!loginMap[ekey].last || ev.signed_in_at > loginMap[ekey].last) loginMap[ekey].last = ev.signed_in_at;
     }
     var loginStats = Object.values(loginMap).sort(function(a, b) { return b.count - a.count; });
 
