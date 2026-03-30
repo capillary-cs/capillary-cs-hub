@@ -4605,6 +4605,8 @@ var _unused = (() => {
     const [filterUser, setFilterUser] = useState("all");
     const [filterAction, setFilterAction] = useState("all");
     const [searchEntity, setSearchEntity] = useState("");
+    const [page, setPage] = useState(1);
+    var PAGE_SIZE = 25;
     useEffect(() => {
       if (!sbClient) { setLoading(false); return; }
       let pending = 2;
@@ -4678,14 +4680,14 @@ var _unused = (() => {
           }, "\uD83D\uDD10 Login History")
         ),
         auditTab === "changes" && React.createElement("select", {
-          value: filterUser, onChange: function(e) { setFilterUser(e.target.value); },
+          value: filterUser, onChange: function(e) { setFilterUser(e.target.value); setPage(1); },
           className: "text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-600"
         },
           React.createElement("option", { value: "all" }, "All users"),
           allUsers.map(function(u) { return React.createElement("option", { key: u, value: u }, u); })
         ),
         auditTab === "changes" && React.createElement("select", {
-          value: filterAction, onChange: function(e) { setFilterAction(e.target.value); },
+          value: filterAction, onChange: function(e) { setFilterAction(e.target.value); setPage(1); },
           className: "text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-600"
         },
           React.createElement("option", { value: "all" }, "All actions"),
@@ -4693,45 +4695,62 @@ var _unused = (() => {
         ),
         auditTab === "changes" && React.createElement("input", {
           type: "text", placeholder: "Search record\u2026", value: searchEntity,
-          onChange: function(e) { setSearchEntity(e.target.value); },
+          onChange: function(e) { setSearchEntity(e.target.value); setPage(1); },
           className: "text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-600 w-36"
         }),
         auditTab === "changes" && React.createElement("span", { className: "text-xs text-gray-400 ml-auto" }, filtered.length + " of " + logs.length + " entries")
       ),
 
-      auditTab === "changes" && React.createElement("div", { className: "overflow-x-auto rounded-xl border border-gray-100" },
-        filtered.length === 0
-          ? React.createElement("div", { className: "py-8 text-center text-sm text-gray-400" }, logs.length ? "No entries match your filters." : "No audit entries yet. Make any change in the app to see it recorded here.")
-          : React.createElement("table", { className: "w-full text-sm" },
-              React.createElement("thead", null,
-                React.createElement("tr", { className: "bg-gray-50 border-b border-gray-100" },
-                  React.createElement("th", { className: "text-left py-2.5 px-3 text-xs font-semibold text-gray-500 whitespace-nowrap" }, "Time"),
-                  React.createElement("th", { className: "text-left py-2.5 px-3 text-xs font-semibold text-gray-500" }, "User"),
-                  React.createElement("th", { className: "text-left py-2.5 px-3 text-xs font-semibold text-gray-500" }, "Action"),
-                  React.createElement("th", { className: "text-left py-2.5 px-3 text-xs font-semibold text-gray-500" }, "Record"),
-                  React.createElement("th", { className: "text-left py-2.5 px-3 text-xs font-semibold text-gray-500" }, "What changed")
-                )
-              ),
-              React.createElement("tbody", null, filtered.map(function(log) {
-                var color = ACTION_COLOR[log.action] || "#64748b";
-                var label = ACTION_LABEL[log.action] || log.action;
-                var ts = log.created_at ? new Date(log.created_at) : null;
-                return React.createElement("tr", { key: log.id, className: "border-t border-gray-50 hover:bg-gray-50" },
-                  React.createElement("td", { className: "py-2 px-3 text-xs text-gray-400 whitespace-nowrap" },
-                    ts ? ts.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " " + ts.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) : "—"
-                  ),
-                  React.createElement("td", { className: "py-2 px-3 text-xs font-medium text-gray-700" }, log.user_email || "—"),
-                  React.createElement("td", { className: "py-2 px-3" },
-                    React.createElement("span", {
-                      className: "text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap",
-                      style: { background: color + "18", color: color }
-                    }, label)
-                  ),
-                  React.createElement("td", { className: "py-2 px-3 text-xs text-gray-700 font-medium" }, log.entity_name || log.entity_type || "—"),
-                  React.createElement("td", { className: "py-2 px-3 text-xs text-gray-500 max-w-xs" }, log.details || "—")
-                );
-              }))
-            )
+      auditTab === "changes" && React.createElement("div", { className: "space-y-2" },
+        React.createElement("div", { className: "overflow-x-auto rounded-xl border border-gray-100" },
+          filtered.length === 0
+            ? React.createElement("div", { className: "py-8 text-center text-sm text-gray-400" }, logs.length ? "No entries match your filters." : "No audit entries yet. Make any change in the app to see it recorded here.")
+            : React.createElement("table", { className: "w-full text-sm" },
+                React.createElement("thead", null,
+                  React.createElement("tr", { className: "bg-gray-50 border-b border-gray-100" },
+                    React.createElement("th", { className: "text-left py-2.5 px-3 text-xs font-semibold text-gray-500 whitespace-nowrap" }, "Time"),
+                    React.createElement("th", { className: "text-left py-2.5 px-3 text-xs font-semibold text-gray-500" }, "User"),
+                    React.createElement("th", { className: "text-left py-2.5 px-3 text-xs font-semibold text-gray-500" }, "Action"),
+                    React.createElement("th", { className: "text-left py-2.5 px-3 text-xs font-semibold text-gray-500" }, "Record"),
+                    React.createElement("th", { className: "text-left py-2.5 px-3 text-xs font-semibold text-gray-500" }, "What changed")
+                  )
+                ),
+                React.createElement("tbody", null, filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map(function(log) {
+                  var color = ACTION_COLOR[log.action] || "#64748b";
+                  var label = ACTION_LABEL[log.action] || log.action;
+                  var ts = log.created_at ? new Date(log.created_at) : null;
+                  return React.createElement("tr", { key: log.id, className: "border-t border-gray-50 hover:bg-gray-50" },
+                    React.createElement("td", { className: "py-2 px-3 text-xs text-gray-400 whitespace-nowrap" },
+                      ts ? ts.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " " + ts.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) : "—"
+                    ),
+                    React.createElement("td", { className: "py-2 px-3 text-xs font-medium text-gray-700" }, log.user_email || "—"),
+                    React.createElement("td", { className: "py-2 px-3" },
+                      React.createElement("span", {
+                        className: "text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap",
+                        style: { background: color + "18", color: color }
+                      }, label)
+                    ),
+                    React.createElement("td", { className: "py-2 px-3 text-xs text-gray-700 font-medium" }, log.entity_name || log.entity_type || "—"),
+                    React.createElement("td", { className: "py-2 px-3 text-xs text-gray-500 max-w-xs" }, log.details || "—")
+                  );
+                }))
+              )
+        ),
+        filtered.length > PAGE_SIZE && React.createElement("div", { className: "flex items-center justify-between px-1" },
+          React.createElement("button", {
+            onClick: function() { setPage(function(p) { return Math.max(1, p - 1); }); },
+            disabled: page === 1,
+            className: "text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 disabled:opacity-30 hover:bg-gray-50"
+          }, "\u2190 Prev"),
+          React.createElement("span", { className: "text-xs text-gray-400" },
+            "Page " + page + " of " + Math.ceil(filtered.length / PAGE_SIZE) + " \u00B7 " + filtered.length + " entries"
+          ),
+          React.createElement("button", {
+            onClick: function() { setPage(function(p) { return Math.min(Math.ceil(filtered.length / PAGE_SIZE), p + 1); }); },
+            disabled: page >= Math.ceil(filtered.length / PAGE_SIZE),
+            className: "text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 disabled:opacity-30 hover:bg-gray-50"
+          }, "Next \u2192")
+        )
       ),
 
       auditTab === "logins" && React.createElement("div", { className: "space-y-3" },
