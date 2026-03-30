@@ -4614,7 +4614,7 @@ var _unused = (() => {
       sbClient.from("audit_log").select("*").order("created_at", { ascending: false }).limit(500)
         .then(function(res) { if (res.data) setLogs(res.data); done(); })
         .catch(done);
-      sbClient.from("login_events").select("*").order("signed_in_at", { ascending: false }).limit(500)
+      sbClient.from("login_events").select("email, display_name, signed_in_at").order("signed_in_at", { ascending: false }).limit(10000)
         .then(function(res) { if (res.data) setLoginEvents(res.data); done(); })
         .catch(done);
     }, []);
