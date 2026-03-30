@@ -1974,202 +1974,173 @@ var _unused = (() => {
     const [clientFilter, setClientFilter] = React.useState("all");
     const [typeFilter, setTypeFilter] = React.useState("all");
     const [oppFilter, setOppFilter] = React.useState("all");
-    const [expandedId, setExpandedId] = React.useState(null);
+    const [search, setSearch] = React.useState("");
+    const [expandedNotes, setExpandedNotes] = React.useState(new Set());
 
     const clientIds = new Set(lead.clients.map((c) => c.id));
     const leadOpps = opps.filter((o) => clientIds.has(o.clientId));
 
-    // Collect all activities
     const allActivities = [];
     leadOpps.forEach((opp) => {
       const client = clients.find((c) => c.id === opp.clientId);
-      (opp.activities || []).forEach((activity) => {
-        allActivities.push({ ...activity, opp, client });
-      });
+      (opp.activities || []).forEach((activity) => { allActivities.push({ ...activity, opp, client }); });
     });
 
     const now = new Date();
     now.setHours(0, 0, 0, 0);
-    const daysFilter = parseInt(dateFilter);
     const cutoffDate = new Date(now);
-    cutoffDate.setDate(cutoffDate.getDate() - daysFilter);
+    cutoffDate.setDate(cutoffDate.getDate() - parseInt(dateFilter));
 
-    // Filter activities
     const filtered = allActivities
       .filter((a) => !a.date || new Date(a.date + "T00:00:00") >= cutoffDate)
       .filter((a) => clientFilter === "all" || a.client?.id === clientFilter)
       .filter((a) => typeFilter === "all" || a.type === typeFilter)
       .filter((a) => oppFilter === "all" || a.opp?.id === oppFilter)
+      .filter((a) => !search.trim() || [a.notes, a.nextSteps, a.opp?.name, a.client?.name].some((f) => (f || "").toLowerCase().includes(search.toLowerCase())))
       .sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    // Summary stats
-    const thisMonth = allActivities.filter((a) => {
-      const d = new Date(a.date + "T00:00:00");
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    });
+    const overdue = leadOpps.flatMap((opp) =>
+      (opp.activities || []).filter((a) => a.followUpDate && new Date(a.followUpDate + "T00:00:00") < now)
+    );
 
-    const overdue = leadOpps.flatMap((opp) => {
-      const lastActivity = (opp.activities || []).length > 0 ? (opp.activities || []).sort((a, b) => new Date(b.date) - new Date(a.date))[0] : null;
-      return (opp.activities || []).filter((a) => a.followUpDate && new Date(a.followUpDate + "T00:00:00") < now && (!lastActivity || lastActivity.id !== a.id || !lastActivity.followUpDate));
-    });
-
-    // Get opportunities for dropdown — cascaded by client filter
     const dropdownOpps = clientFilter === "all" ? leadOpps : leadOpps.filter((o) => o.clientId === clientFilter);
+    const hasFilters = clientFilter !== "all" || typeFilter !== "all" || oppFilter !== "all" || dateFilter !== "999999" || search.trim() !== "";
+    const hideClient = clientFilter !== "all" || oppFilter !== "all";
+    const hideOpp = oppFilter !== "all";
 
-    const formatDate = (dateStr) => {
-      return dateStr ? new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—";
-    };
+    const thisMonthCount = filtered.filter((a) => { const d = new Date(a.date + "T00:00:00"); return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(); }).length;
+    const withOutcome = filtered.filter((a) => a.outcome);
+    const positiveRate = withOutcome.length > 0 ? Math.round(withOutcome.filter((a) => a.outcome === "Positive").length / withOutcome.length * 100) : null;
 
-    return /* @__PURE__ */ React.createElement("div", { className: "space-y-5" },
+    const focusedOpp = oppFilter !== "all" ? leadOpps.find((o) => o.id === oppFilter) : null;
+    const focusedClient = focusedOpp ? clients.find((c) => c.id === focusedOpp.clientId) : null;
+
+    const fmtD = (ds) => ds ? new Date(ds + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "\u2014";
+    const toggleNote = (id) => setExpandedNotes((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
+
+    const selStyle = { fontSize: 12, padding: "4px 10px", borderRadius: 8, border: "1px solid #e2e8f0", background: "#fff", color: "#334155" };
+
+    return /* @__PURE__ */ React.createElement("div", { className: "space-y-4" },
+
+      /* Stats — always reflects current filter */
       /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-4 gap-4" },
         /* @__PURE__ */ React.createElement("div", { className: "bg-blue-50 rounded-xl p-4 text-center" },
-          /* @__PURE__ */ React.createElement("div", { className: "text-2xl font-bold", style: { color: "#2080BD" } }, thisMonth.length),
-          /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mt-1" }, "Activities (this month)")
+          /* @__PURE__ */ React.createElement("div", { className: "text-2xl font-bold", style: { color: "#2080BD" } }, filtered.length),
+          /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mt-1" }, hasFilters ? "Matching activities" : "Total activities")
         ),
         /* @__PURE__ */ React.createElement("div", { className: "bg-red-50 rounded-xl p-4 text-center" },
           /* @__PURE__ */ React.createElement("div", { className: "text-2xl font-bold text-red-600" }, overdue.length),
           /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mt-1" }, "Overdue follow-ups")
         ),
         /* @__PURE__ */ React.createElement("div", { className: "bg-purple-50 rounded-xl p-4 text-center" },
-          /* @__PURE__ */ React.createElement("div", { className: "text-2xl font-bold text-purple-600" }, leadOpps.length > 0 ? Math.round(allActivities.length / leadOpps.length) : 0),
-          /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mt-1" }, "Avg per opp")
+          /* @__PURE__ */ React.createElement("div", { className: "text-2xl font-bold text-purple-600" }, thisMonthCount),
+          /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mt-1" }, "This month")
         ),
         /* @__PURE__ */ React.createElement("div", { className: "bg-green-50 rounded-xl p-4 text-center" },
-          /* @__PURE__ */ React.createElement("div", { className: "text-2xl font-bold text-green-600" }, allActivities.length > 0 ? Math.floor((now - new Date(allActivities[0].date + "T00:00:00")) / (1000 * 60 * 60 * 24)) : "—"),
-          /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mt-1" }, "Days since last activity")
+          /* @__PURE__ */ React.createElement("div", { className: "text-2xl font-bold text-green-600" }, positiveRate !== null ? positiveRate + "%" : "\u2014"),
+          /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mt-1" }, "Positive outcomes")
         )
       ),
-      /* @__PURE__ */ React.createElement("div", { className: "card" },
-        /* @__PURE__ */ React.createElement("h3", { className: "font-semibold text-gray-700 mb-3" }, "Filters"),
-        /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-5 gap-3" },
-          /* @__PURE__ */ React.createElement("div", null,
-            /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Date Range"),
-            /* @__PURE__ */ React.createElement("select", {
-              value: dateFilter,
-              onChange: (e) => setDateFilter(e.target.value),
-              className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
-            }, /* @__PURE__ */ React.createElement("option", { value: "7" }, "Last 7 days"), /* @__PURE__ */ React.createElement("option", { value: "30" }, "Last 30 days"), /* @__PURE__ */ React.createElement("option", { value: "90" }, "Last 90 days"), /* @__PURE__ */ React.createElement("option", { value: "999999" }, "All time"))
-          ),
-          /* @__PURE__ */ React.createElement("div", null,
-            /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Client"),
-            /* @__PURE__ */ React.createElement("select", {
-              value: clientFilter,
-              onChange: (e) => { setClientFilter(e.target.value); setOppFilter("all"); },
-              className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
-            }, /* @__PURE__ */ React.createElement("option", { value: "all" }, "All clients"), lead.clients.map((c) => /* @__PURE__ */ React.createElement("option", { key: c.id, value: c.id }, c.name)))
-          ),
-          /* @__PURE__ */ React.createElement("div", null,
-            /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Type"),
-            /* @__PURE__ */ React.createElement("select", {
-              value: typeFilter,
-              onChange: (e) => setTypeFilter(e.target.value),
-              className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
-            }, /* @__PURE__ */ React.createElement("option", { value: "all" }, "All types"), ACTIVITY_TYPES.map((t) => /* @__PURE__ */ React.createElement("option", { key: t, value: t }, t)))
-          ),
-          /* @__PURE__ */ React.createElement("div", null,
-            /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, "Opportunity"),
-            /* @__PURE__ */ React.createElement("select", {
-              value: oppFilter,
-              onChange: (e) => setOppFilter(e.target.value),
-              className: "w-full text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
-            }, /* @__PURE__ */ React.createElement("option", { value: "all" }, "All opps (" + dropdownOpps.length + ")"), dropdownOpps.map((o) => { const cl = clientFilter === "all" ? lead.clients.find((c) => c.id === o.clientId) : null; return /* @__PURE__ */ React.createElement("option", { key: o.id, value: o.id }, cl ? cl.name + " \u2014 " + o.name : o.name); }))
-          ),
-          /* @__PURE__ */ React.createElement("div", null,
-            /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-600 block mb-1" }, " "),
-            /* @__PURE__ */ React.createElement("button", {
-              onClick: () => { setDateFilter("999999"); setClientFilter("all"); setTypeFilter("all"); setOppFilter("all"); },
-              className: "btn-secondary text-xs w-full"
-            }, "Reset")
-          )
-        )
+
+      /* Focused opp context banner — only visible when an opp is selected */
+      focusedOpp && /* @__PURE__ */ React.createElement("div", { className: "rounded-xl px-5 py-3 flex items-center gap-4", style: { background: "#f0f9ff", border: "1px solid #bae6fd" } },
+        /* @__PURE__ */ React.createElement("div", { className: "flex-1" },
+          /* @__PURE__ */ React.createElement("div", { className: "text-xs font-semibold uppercase tracking-wide mb-0.5", style: { color: "#0284c7" } }, focusedClient?.name || ""),
+          /* @__PURE__ */ React.createElement("div", { className: "text-sm font-bold text-gray-900" }, focusedOpp.name),
+          /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mt-0.5" }, focusedOpp.status, focusedOpp.owner ? " \xB7 " + focusedOpp.owner : "", focusedOpp.value ? " \xB7 $" + Number(focusedOpp.value).toLocaleString() : "")
+        ),
+        /* @__PURE__ */ React.createElement("span", { className: "text-xs font-semibold px-3 py-1 rounded-full", style: { background: "#dbeafe", color: "#1e40af" } }, filtered.length, " activit", filtered.length === 1 ? "y" : "ies"),
+        /* @__PURE__ */ React.createElement("button", { onClick: () => setOppFilter("all"), className: "text-xs font-semibold hover:opacity-70 ml-2", style: { color: "#0284c7" } }, "\u2715 Clear filter")
       ),
-      overdue.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "card" },
-        /* @__PURE__ */ React.createElement("h3", { className: "font-semibold text-gray-700 mb-3 flex items-center gap-2" }, /* @__PURE__ */ React.createElement("span", { style: { color: "#ef4444", fontSize: "18px" } }, "\u26A0\uFE0F"), "Overdue Follow-Ups"),
-        /* @__PURE__ */ React.createElement("div", { className: "space-y-2" },
-          overdue.slice(0, 5).map((a, i) => {
-            const opp = leadOpps.find((o) => o.id === a.id);
+
+      /* Inline filter bar */
+      /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 flex-wrap" },
+        /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14 } }, "\uD83D\uDD0D"),
+        /* @__PURE__ */ React.createElement("input", { value: search, onChange: (e) => setSearch(e.target.value), placeholder: "Search notes, client, opp\u2026", style: { ...selStyle, minWidth: 200, padding: "4px 12px" }, className: "focus:outline-none focus:ring-1 focus:ring-sky-400" }),
+        /* @__PURE__ */ React.createElement("select", { value: dateFilter, onChange: (e) => setDateFilter(e.target.value), style: selStyle },
+          /* @__PURE__ */ React.createElement("option", { value: "7" }, "Last 7 days"),
+          /* @__PURE__ */ React.createElement("option", { value: "30" }, "Last 30 days"),
+          /* @__PURE__ */ React.createElement("option", { value: "90" }, "Last 90 days"),
+          /* @__PURE__ */ React.createElement("option", { value: "999999" }, "All time")
+        ),
+        /* @__PURE__ */ React.createElement("select", { value: clientFilter, onChange: (e) => { setClientFilter(e.target.value); setOppFilter("all"); }, style: selStyle },
+          /* @__PURE__ */ React.createElement("option", { value: "all" }, "All clients"),
+          lead.clients.map((c) => /* @__PURE__ */ React.createElement("option", { key: c.id, value: c.id }, c.name))
+        ),
+        /* @__PURE__ */ React.createElement("select", { value: typeFilter, onChange: (e) => setTypeFilter(e.target.value), style: selStyle },
+          /* @__PURE__ */ React.createElement("option", { value: "all" }, "All types"),
+          ACTIVITY_TYPES.map((t) => /* @__PURE__ */ React.createElement("option", { key: t, value: t }, t))
+        ),
+        /* @__PURE__ */ React.createElement("select", { value: oppFilter, onChange: (e) => setOppFilter(e.target.value), style: selStyle },
+          /* @__PURE__ */ React.createElement("option", { value: "all" }, "All opps (" + dropdownOpps.length + ")"),
+          dropdownOpps.map((o) => { const cl = clientFilter === "all" ? lead.clients.find((c) => c.id === o.clientId) : null; return /* @__PURE__ */ React.createElement("option", { key: o.id, value: o.id }, cl ? cl.name + " \u2014 " + o.name : o.name); })
+        ),
+        hasFilters && /* @__PURE__ */ React.createElement("button", { onClick: () => { setDateFilter("999999"); setClientFilter("all"); setTypeFilter("all"); setOppFilter("all"); setSearch(""); }, className: "text-xs font-semibold px-2.5 py-1.5 rounded-lg hover:bg-sky-50 transition-colors", style: { color: "#0284c7" } }, "\u2715 Reset"),
+        /* @__PURE__ */ React.createElement("span", { className: "text-xs text-gray-400 ml-auto" }, filtered.length, " activit", filtered.length === 1 ? "y" : "ies")
+      ),
+
+      /* Overdue — compact chips */
+      overdue.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "rounded-xl px-4 py-3", style: { background: "#fff5f5", border: "1px solid #fecaca" } },
+        /* @__PURE__ */ React.createElement("div", { className: "text-xs font-bold mb-2", style: { color: "#dc2626" } }, "\u26A0\uFE0F Overdue Follow-Ups (" + overdue.length + ")"),
+        /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-2" },
+          overdue.slice(0, 6).map((a, i) => {
             const daysOverdue = Math.floor((now - new Date(a.followUpDate + "T00:00:00")) / (1000 * 60 * 60 * 24));
-            return /* @__PURE__ */ React.createElement("div", { key: i, className: "p-3 border-l-4 border-red-500 bg-red-50 rounded-lg" },
-              /* @__PURE__ */ React.createElement("div", { className: "text-xs font-semibold text-gray-800" }, a.client?.name || "—"),
-              /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-600 mt-0.5" }, a.opp?.name || "—"),
-              /* @__PURE__ */ React.createElement("div", { className: "text-xs text-red-600 font-semibold mt-1" }, daysOverdue, " days overdue"),
-              a.notes && /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-600 mt-1" }, a.notes)
+            return /* @__PURE__ */ React.createElement("div", { key: i, className: "text-xs rounded-lg px-3 py-1.5 flex items-center gap-1.5", style: { background: "#fee2e2", border: "1px solid #fca5a5" } },
+              /* @__PURE__ */ React.createElement("span", { className: "font-semibold text-gray-800" }, a.client?.name || "\u2014"),
+              /* @__PURE__ */ React.createElement("span", { className: "text-gray-400" }, "\xB7"),
+              /* @__PURE__ */ React.createElement("span", { className: "text-gray-600" }, a.opp?.name || "\u2014"),
+              /* @__PURE__ */ React.createElement("span", { className: "font-bold ml-1", style: { color: "#dc2626" } }, daysOverdue + "d overdue")
             );
           })
         )
       ),
+
+      /* Activity timeline table */
       /* @__PURE__ */ React.createElement("div", { className: "card p-0 overflow-hidden" },
-        /* @__PURE__ */ React.createElement("div", { className: "px-5 py-4 border-b border-gray-100" },
-          /* @__PURE__ */ React.createElement("h3", { className: "font-semibold text-gray-700" }, "Activity Timeline")
+        /* @__PURE__ */ React.createElement("div", { className: "px-5 py-3 border-b border-gray-100 flex items-center justify-between" },
+          /* @__PURE__ */ React.createElement("h3", { className: "font-semibold text-gray-700 text-sm" }, "Activity Timeline"),
+          filtered.length > 0 && /* @__PURE__ */ React.createElement("span", { className: "text-xs text-gray-400" }, fmtD(filtered[filtered.length - 1].date) + " \u2192 " + fmtD(filtered[0].date))
         ),
-        filtered.length === 0 ? /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 text-center py-6" }, "No activities found") : /* @__PURE__ */ React.createElement("table", { className: "w-full text-xs" },
-          /* @__PURE__ */ React.createElement("thead", null,
-            /* @__PURE__ */ React.createElement("tr", { className: "border-b border-gray-100 bg-gray-50" },
-              /* @__PURE__ */ React.createElement("th", { className: "px-3 py-2 text-left" }, "Date"),
-              /* @__PURE__ */ React.createElement("th", { className: "px-3 py-2 text-left" }, "Type"),
-              /* @__PURE__ */ React.createElement("th", { className: "px-3 py-2 text-left" }, "Client"),
-              /* @__PURE__ */ React.createElement("th", { className: "px-3 py-2 text-left" }, "Opportunity"),
-              /* @__PURE__ */ React.createElement("th", { className: "px-3 py-2 text-left" }, "Who → Stakeholder"),
-              /* @__PURE__ */ React.createElement("th", { className: "px-3 py-2 text-left" }, "Notes"),
-              /* @__PURE__ */ React.createElement("th", { className: "px-3 py-2 text-left" }, "Outcome"),
-              /* @__PURE__ */ React.createElement("th", { className: "px-3 py-2 text-left" }, "Follow-up")
-            )
-          ),
-          /* @__PURE__ */ React.createElement("tbody", null,
-            filtered.map((a) => {
-              const isExpanded = expandedId === a.id;
-              const followUpDate = a.followUpDate ? new Date(a.followUpDate + "T00:00:00") : null;
-              const isOverdue = followUpDate && followUpDate < now;
-              return /* @__PURE__ */ React.createElement(React.Fragment, { key: a.id },
-                /* @__PURE__ */ React.createElement("tr", {
-                  onClick: () => setExpandedId(isExpanded ? null : a.id),
-                  className: "hover:bg-gray-50 cursor-pointer border-b border-gray-100"
-                },
-                  /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2 text-gray-600" }, formatDate(a.date)),
-                  /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2" }, /* @__PURE__ */ React.createElement(ActivityBadge, { type: a.type, compact: true })),
-                  /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2 text-gray-600" }, a.client?.name || "—"),
-                  /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2 text-gray-600" }, a.opp?.name || "—"),
-                  /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2 text-gray-600" }, (a.who || "—"), " → ", a.stakeholder || "—"),
-                  /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2 text-gray-600 max-w-xs truncate", title: a.notes || "" }, a.notes || "—"),
-                  /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2" },
-                    a.outcome && /* @__PURE__ */ React.createElement("span", {
-                      className: "text-xs px-1.5 py-0.5 rounded-md font-semibold",
-                      style: {
-                        background: a.outcome === "Positive" ? "#dcfce7" : a.outcome === "Neutral" ? "#f3f4f6" : "#fee2e2",
-                        color: a.outcome === "Positive" ? "#15803d" : a.outcome === "Neutral" ? "#374151" : "#991b1b",
-                        border: a.outcome === "Positive" ? "1px solid #bbf7d0" : a.outcome === "Neutral" ? "1px solid #d1d5db" : "1px solid #fca5a5"
-                      }
-                    }, a.outcome)
-                  ),
-                  /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2" },
-                    a.followUpDate && /* @__PURE__ */ React.createElement("span", {
-                      className: "text-xs px-1.5 py-0.5 rounded-md font-semibold",
-                      style: {
-                        background: isOverdue ? "#fee2e2" : "#f0fdf4",
-                        color: isOverdue ? "#991b1b" : "#166534",
-                        border: isOverdue ? "1px solid #fca5a5" : "1px solid #86efac"
-                      }
-                    }, isOverdue ? "OVERDUE" : "Due", ": ", formatDate(a.followUpDate))
-                  )
-                ),
-                isExpanded && /* @__PURE__ */ React.createElement("tr", { className: "bg-blue-50 border-b border-gray-100" },
-                  /* @__PURE__ */ React.createElement("td", { colSpan: 8, className: "px-3 py-3" },
-                    /* @__PURE__ */ React.createElement("div", { className: "space-y-2 text-xs" },
-                      a.notes && /* @__PURE__ */ React.createElement("div", null,
-                        /* @__PURE__ */ React.createElement("strong", null, "Notes: "),
-                        a.notes
-                      ),
-                      a.nextSteps && /* @__PURE__ */ React.createElement("div", null,
-                        /* @__PURE__ */ React.createElement("strong", null, "Next Steps: "),
-                        a.nextSteps
-                      )
-                    )
-                  )
+        filtered.length === 0
+          ? /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 text-center py-10" }, hasFilters ? "No activities match your filters" : "No activities yet")
+          : /* @__PURE__ */ React.createElement("table", { className: "w-full text-xs" },
+              /* @__PURE__ */ React.createElement("thead", null,
+                /* @__PURE__ */ React.createElement("tr", { className: "border-b border-gray-100 bg-gray-50" },
+                  /* @__PURE__ */ React.createElement("th", { className: "px-4 py-2.5 text-left font-semibold text-gray-400 uppercase tracking-wide whitespace-nowrap", style: { fontSize: 10 } }, "Date"),
+                  /* @__PURE__ */ React.createElement("th", { className: "px-4 py-2.5 text-left font-semibold text-gray-400 uppercase tracking-wide", style: { fontSize: 10 } }, "Type"),
+                  !hideClient && /* @__PURE__ */ React.createElement("th", { className: "px-4 py-2.5 text-left font-semibold text-gray-400 uppercase tracking-wide", style: { fontSize: 10 } }, "Client"),
+                  !hideOpp && /* @__PURE__ */ React.createElement("th", { className: "px-4 py-2.5 text-left font-semibold text-gray-400 uppercase tracking-wide", style: { fontSize: 10 } }, "Opportunity"),
+                  /* @__PURE__ */ React.createElement("th", { className: "px-4 py-2.5 text-left font-semibold text-gray-400 uppercase tracking-wide", style: { fontSize: 10 } }, "Notes"),
+                  /* @__PURE__ */ React.createElement("th", { className: "px-4 py-2.5 text-left font-semibold text-gray-400 uppercase tracking-wide whitespace-nowrap", style: { fontSize: 10 } }, "Outcome"),
+                  /* @__PURE__ */ React.createElement("th", { className: "px-4 py-2.5 text-left font-semibold text-gray-400 uppercase tracking-wide whitespace-nowrap", style: { fontSize: 10 } }, "Follow-up")
                 )
-              );
-            })
-          )
-        )
+              ),
+              /* @__PURE__ */ React.createElement("tbody", null,
+                filtered.map((a) => {
+                  const followUpDate = a.followUpDate ? new Date(a.followUpDate + "T00:00:00") : null;
+                  const isOverdue = followUpDate && followUpDate < now;
+                  const isExpanded = expandedNotes.has(a.id);
+                  const longNote = (a.notes || "").length > 120 || a.nextSteps;
+                  return /* @__PURE__ */ React.createElement("tr", { key: a.id, className: "border-b border-gray-50 hover:bg-gray-50 align-top" },
+                    /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3 text-gray-500 whitespace-nowrap" }, fmtD(a.date)),
+                    /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3" }, /* @__PURE__ */ React.createElement(ActivityBadge, { type: a.type, compact: true })),
+                    !hideClient && /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3 font-medium text-gray-700 whitespace-nowrap" }, a.client?.name || "\u2014"),
+                    !hideOpp && /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3 text-gray-600" }, a.opp?.name || "\u2014"),
+                    /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3 text-gray-700", style: { maxWidth: 400 } },
+                      /* @__PURE__ */ React.createElement("div", { style: isExpanded ? {} : { display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } }, a.notes || "\u2014"),
+                      isExpanded && a.nextSteps && /* @__PURE__ */ React.createElement("div", { className: "mt-1.5 text-gray-500" }, /* @__PURE__ */ React.createElement("span", { className: "font-semibold text-gray-600" }, "Next steps: "), a.nextSteps),
+                      longNote && /* @__PURE__ */ React.createElement("button", { onClick: () => toggleNote(a.id), className: "text-xs font-semibold mt-0.5 block hover:opacity-70", style: { color: "#0284c7" } }, isExpanded ? "\u25B4 less" : "\u25BE more")
+                    ),
+                    /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3" },
+                      a.outcome && /* @__PURE__ */ React.createElement("span", { className: "text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap", style: { background: a.outcome === "Positive" ? "#dcfce7" : a.outcome === "Neutral" ? "#f3f4f6" : "#fee2e2", color: a.outcome === "Positive" ? "#15803d" : a.outcome === "Neutral" ? "#374151" : "#991b1b" } }, a.outcome)
+                    ),
+                    /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3" },
+                      followUpDate && /* @__PURE__ */ React.createElement("span", { className: "text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap", style: { background: isOverdue ? "#fee2e2" : "#f0fdf4", color: isOverdue ? "#991b1b" : "#166534" } }, isOverdue ? "\u26A0\uFE0F " : "", "Due: ", fmtD(a.followUpDate))
+                    )
+                  );
+                })
+              )
+            )
       )
     );
   }
