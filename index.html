@@ -4750,7 +4750,7 @@ var _unused = (() => {
       ),
 
       auditTab === "logins" && React.createElement("div", { className: "space-y-3" },
-        React.createElement("div", { className: "grid grid-cols-3 gap-3" },
+        React.createElement("div", { className: "grid grid-cols-2 gap-3" },
           React.createElement("div", { className: "bg-blue-50 rounded-xl p-4" },
             React.createElement("div", { className: "text-2xl font-bold text-blue-700" }, loginStats.reduce(function(s, u) { return s + u.count; }, 0).toLocaleString()),
             React.createElement("div", { className: "text-xs text-blue-500 mt-0.5" }, "Total logins recorded")
@@ -4758,10 +4758,6 @@ var _unused = (() => {
           React.createElement("div", { className: "bg-purple-50 rounded-xl p-4" },
             React.createElement("div", { className: "text-2xl font-bold text-purple-700" }, loginStats.length),
             React.createElement("div", { className: "text-xs text-purple-500 mt-0.5" }, "Unique users")
-          ),
-          loginStats.length > 0 && React.createElement("div", { className: "bg-green-50 rounded-xl p-4" },
-            React.createElement("div", { className: "text-base font-bold text-green-700 truncate" }, loginStats[0].name || (loginStats[0].email || "").split("@")[0]),
-            React.createElement("div", { className: "text-xs text-green-500 mt-0.5" }, "Most active \u00B7 " + loginStats[0].count + " logins")
           )
         ),
         loginStats.length === 0
