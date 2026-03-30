@@ -4614,7 +4614,7 @@ var _unused = (() => {
       sbClient.from("audit_log").select("*").order("created_at", { ascending: false }).limit(500)
         .then(function(res) { if (res.data) setLogs(res.data); done(); })
         .catch(done);
-      sbClient.from("login_events").select("email, display_name, signed_in_at").order("signed_in_at", { ascending: false }).limit(10000)
+      sbClient.rpc("get_login_stats")
         .then(function(res) { if (res.data) setLoginEvents(res.data); done(); })
         .catch(done);
     }, []);
@@ -4653,15 +4653,11 @@ var _unused = (() => {
       return true;
     });
 
-    var loginMap = {};
-    for (var ei = 0; ei < loginEvents.length; ei++) {
-      var ev = loginEvents[ei];
-      var ekey = ev.email || "unknown";
-      if (!loginMap[ekey]) loginMap[ekey] = { email: ekey, name: ev.display_name || null, count: 0, last: null };
-      loginMap[ekey].count++;
-      if (!loginMap[ekey].last || ev.signed_in_at > loginMap[ekey].last) loginMap[ekey].last = ev.signed_in_at;
-    }
-    var loginStats = Object.values(loginMap).sort(function(a, b) { return b.count - a.count; });
+    // loginEvents now comes pre-aggregated from get_login_stats() RPC
+    // each row: { email, display_name, login_count, last_login }
+    var loginStats = loginEvents.map(function(r) {
+      return { email: r.email || "unknown", name: r.display_name || null, count: Number(r.login_count) || 0, last: r.last_login || null };
+    });
 
     if (loading) return React.createElement("div", { className: "py-8 text-center text-sm text-gray-400" }, "Loading audit data...");
 
@@ -4756,7 +4752,7 @@ var _unused = (() => {
       auditTab === "logins" && React.createElement("div", { className: "space-y-3" },
         React.createElement("div", { className: "grid grid-cols-3 gap-3" },
           React.createElement("div", { className: "bg-blue-50 rounded-xl p-4" },
-            React.createElement("div", { className: "text-2xl font-bold text-blue-700" }, loginEvents.length),
+            React.createElement("div", { className: "text-2xl font-bold text-blue-700" }, loginStats.reduce(function(s, u) { return s + u.count; }, 0).toLocaleString()),
             React.createElement("div", { className: "text-xs text-blue-500 mt-0.5" }, "Total logins recorded")
           ),
           React.createElement("div", { className: "bg-purple-50 rounded-xl p-4" },
