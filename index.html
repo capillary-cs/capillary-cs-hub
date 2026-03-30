@@ -4599,35 +4599,201 @@ var _unused = (() => {
 
   function AuditLogView() {
     const [logs, setLogs] = useState([]);
+    const [loginEvents, setLoginEvents] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [tab, setTab] = useState("changes");
+    const [filterUser, setFilterUser] = useState("all");
+    const [filterAction, setFilterAction] = useState("all");
+    const [searchEntity, setSearchEntity] = useState("");
     useEffect(() => {
       if (!sbClient) return;
-      sbClient.from("audit_log").select("*").order("created_at", { ascending: false }).limit(100).then(({ data }) => {
-        if (data) setLogs(data);
+      Promise.all([
+        sbClient.from("audit_log").select("*").order("created_at", { ascending: false }).limit(500),
+        sbClient.from("login_events").select("*").order("created_at", { ascending: false }).limit(500)
+      ]).then(([auditRes, loginRes]) => {
+        if (auditRes.data) setLogs(auditRes.data);
+        if (loginRes.data) setLoginEvents(loginRes.data);
         setLoading(false);
       }).catch(() => setLoading(false));
     }, []);
-    if (loading) return React.createElement("div", { className: "py-4 text-center text-sm text-gray-400" }, "Loading audit log...");
-    if (!logs.length) return React.createElement("div", { className: "py-4 text-center text-sm text-gray-400" }, "No audit entries yet. Activity will appear here once the audit_log table is created in Supabase.");
-    return React.createElement("div", { className: "overflow-x-auto" },
-      React.createElement("table", { className: "w-full text-sm" },
-        React.createElement("thead", null, React.createElement("tr", null,
-          React.createElement("th", { className: "text-left py-2 px-3" }, "Time"),
-          React.createElement("th", { className: "text-left py-2 px-3" }, "User"),
-          React.createElement("th", { className: "text-left py-2 px-3" }, "Action"),
-          React.createElement("th", { className: "text-left py-2 px-3" }, "Entity"),
-          React.createElement("th", { className: "text-left py-2 px-3" }, "Details")
-        )),
-        React.createElement("tbody", null, logs.map(function(log) {
-          var actionColors = { create: "#16a34a", update: "#2080BD", delete: "#dc2626", export: "#7c3aed", login: "#64748b" };
-          return React.createElement("tr", { key: log.id, className: "border-t border-gray-50 hover:bg-gray-50" },
-            React.createElement("td", { className: "py-2 px-3 text-xs text-gray-400 whitespace-nowrap" }, new Date(log.created_at).toLocaleString()),
-            React.createElement("td", { className: "py-2 px-3 text-xs font-medium text-gray-700" }, log.user_email),
-            React.createElement("td", { className: "py-2 px-3" }, React.createElement("span", { className: "text-xs font-bold px-2 py-0.5 rounded-full", style: { background: (actionColors[log.action] || "#64748b") + "15", color: actionColors[log.action] || "#64748b" } }, log.action)),
-            React.createElement("td", { className: "py-2 px-3 text-xs text-gray-600" }, log.entity_name || log.entity_type || "\u2014"),
-            React.createElement("td", { className: "py-2 px-3 text-xs text-gray-400 max-w-xs truncate" }, log.details || "\u2014")
-          );
-        }))
+
+    const ACTION_COLOR = {
+      update_client: "#2080BD", update_opportunity: "#7c3aed", add_client: "#16a34a", add_opportunity: "#16a34a",
+      archive_client: "#f59e0b", delete_client: "#dc2626", delete_opportunity: "#dc2626",
+      import_data: "#0891b2", export_data: "#64748b", update_goals: "#f59e0b",
+      add_user: "#16a34a", remove_user: "#dc2626", change_role: "#7c3aed",
+      update_relationships: "#0891b2", import_health: "#f59e0b", import_nps: "#0891b2"
+    };
+    const ACTION_LABEL = {
+      update_client: "Edited client", update_opportunity: "Edited opportunity",
+      add_client: "Added client", add_opportunity: "Added opportunity",
+      archive_client: "Archived client", delete_client: "Deleted client", delete_opportunity: "Deleted opp",
+      import_data: "Imported data", export_data: "Exported data", update_goals: "Updated goals",
+      add_user: "Added user", remove_user: "Removed user", change_role: "Changed role",
+      update_relationships: "Updated contacts", import_health: "Health import", import_nps: "NPS import"
+    };
+
+    const allUsers = useMemo(() => [...new Set(logs.map(l => l.user_email).filter(Boolean))].sort(), [logs]);
+    const allActions = useMemo(() => [...new Set(logs.map(l => l.action).filter(Boolean))].sort(), [logs]);
+
+    const filtered = useMemo(() => logs.filter(l => {
+      if (filterUser !== "all" && l.user_email !== filterUser) return false;
+      if (filterAction !== "all" && l.action !== filterAction) return false;
+      if (searchEntity && !(l.entity_name || "").toLowerCase().includes(searchEntity.toLowerCase())) return false;
+      return true;
+    }), [logs, filterUser, filterAction, searchEntity]);
+
+    // Login stats per user
+    const loginStats = useMemo(() => {
+      const map = {};
+      loginEvents.forEach(e => {
+        const key = e.email || "unknown";
+        if (!map[key]) map[key] = { email: key, name: e.display_name || null, count: 0, last: null };
+        map[key].count++;
+        if (!map[key].last || e.created_at > map[key].last) map[key].last = e.created_at;
+      });
+      return Object.values(map).sort((a, b) => b.count - a.count);
+    }, [loginEvents]);
+
+    if (loading) return React.createElement("div", { className: "py-8 text-center text-sm text-gray-400" }, "Loading audit data...");
+
+    const tabBtn = (id, label) => React.createElement("button", {
+      key: id, onClick: () => setTab(id),
+      className: "text-xs font-semibold px-3 py-1.5 rounded-lg transition-all",
+      style: { background: tab === id ? "#fff" : "transparent", color: tab === id ? "#1e293b" : "#64748b", boxShadow: tab === id ? "0 1px 3px rgba(0,0,0,0.1)" : "none" }
+    }, label);
+
+    return React.createElement("div", { className: "space-y-4" },
+      React.createElement("div", { className: "flex items-center gap-3" },
+        React.createElement("div", { className: "flex gap-1 bg-gray-100 rounded-xl p-1" },
+          tabBtn("changes", "📝 Change Log"),
+          tabBtn("logins", "🔐 Login History")
+        ),
+        tab === "changes" && React.createElement(React.Fragment, null,
+          React.createElement("select", {
+            value: filterUser, onChange: e => setFilterUser(e.target.value),
+            className: "text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-600"
+          },
+            React.createElement("option", { value: "all" }, "All users"),
+            allUsers.map(u => React.createElement("option", { key: u, value: u }, u))
+          ),
+          React.createElement("select", {
+            value: filterAction, onChange: e => setFilterAction(e.target.value),
+            className: "text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-600"
+          },
+            React.createElement("option", { value: "all" }, "All actions"),
+            allActions.map(a => React.createElement("option", { key: a, value: a }, ACTION_LABEL[a] || a))
+          ),
+          React.createElement("input", {
+            type: "text", placeholder: "Search client/opp…", value: searchEntity,
+            onChange: e => setSearchEntity(e.target.value),
+            className: "text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-600 w-40"
+          }),
+          (filterUser !== "all" || filterAction !== "all" || searchEntity) && React.createElement("button", {
+            onClick: () => { setFilterUser("all"); setFilterAction("all"); setSearchEntity(""); },
+            className: "text-xs text-blue-500 hover:text-blue-700"
+          }, "Clear"),
+          React.createElement("span", { className: "text-xs text-gray-400 ml-auto" }, filtered.length, " of ", logs.length, " entries")
+        )
+      ),
+
+      tab === "changes" && React.createElement("div", { className: "overflow-x-auto rounded-xl border border-gray-100" },
+        !filtered.length
+          ? React.createElement("div", { className: "py-8 text-center text-sm text-gray-400" }, logs.length ? "No entries match your filters." : "No audit entries yet.")
+          : React.createElement("table", { className: "w-full text-sm" },
+              React.createElement("thead", null,
+                React.createElement("tr", { className: "bg-gray-50 border-b border-gray-100" },
+                  React.createElement("th", { className: "text-left py-2.5 px-3 text-xs font-semibold text-gray-500 whitespace-nowrap" }, "Time"),
+                  React.createElement("th", { className: "text-left py-2.5 px-3 text-xs font-semibold text-gray-500" }, "User"),
+                  React.createElement("th", { className: "text-left py-2.5 px-3 text-xs font-semibold text-gray-500" }, "Action"),
+                  React.createElement("th", { className: "text-left py-2.5 px-3 text-xs font-semibold text-gray-500" }, "Record"),
+                  React.createElement("th", { className: "text-left py-2.5 px-3 text-xs font-semibold text-gray-500" }, "What changed")
+                )
+              ),
+              React.createElement("tbody", null, filtered.map(log => {
+                const color = ACTION_COLOR[log.action] || "#64748b";
+                const label = ACTION_LABEL[log.action] || log.action;
+                return React.createElement("tr", { key: log.id, className: "border-t border-gray-50 hover:bg-gray-50/60" },
+                  React.createElement("td", { className: "py-2 px-3 text-xs text-gray-400 whitespace-nowrap" },
+                    new Date(log.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+                    React.createElement("span", { className: "ml-1.5 text-gray-300" },
+                      new Date(log.created_at).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+                    )
+                  ),
+                  React.createElement("td", { className: "py-2 px-3 text-xs font-medium text-gray-700 whitespace-nowrap" },
+                    log.user_email ? log.user_email.split("@")[0] : "—",
+                    React.createElement("span", { className: "ml-1 text-gray-300 font-normal" }, log.user_email ? "@" + log.user_email.split("@")[1] : "")
+                  ),
+                  React.createElement("td", { className: "py-2 px-3" },
+                    React.createElement("span", {
+                      className: "text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap",
+                      style: { background: color + "18", color }
+                    }, label)
+                  ),
+                  React.createElement("td", { className: "py-2 px-3 text-xs text-gray-700 font-medium" }, log.entity_name || log.entity_type || "—"),
+                  React.createElement("td", { className: "py-2 px-3 text-xs text-gray-500 max-w-sm" },
+                    log.details
+                      ? React.createElement("span", { className: "font-mono text-xs" }, log.details)
+                      : React.createElement("span", { className: "text-gray-300" }, "—")
+                  )
+                );
+              }))
+            )
+      ),
+
+      tab === "logins" && React.createElement("div", { className: "space-y-3" },
+        React.createElement("div", { className: "grid grid-cols-3 gap-3" },
+          React.createElement("div", { className: "bg-blue-50 rounded-xl p-4" },
+            React.createElement("div", { className: "text-2xl font-bold text-blue-700" }, loginEvents.length),
+            React.createElement("div", { className: "text-xs text-blue-500 mt-0.5" }, "Total logins recorded")
+          ),
+          React.createElement("div", { className: "bg-purple-50 rounded-xl p-4" },
+            React.createElement("div", { className: "text-2xl font-bold text-purple-700" }, loginStats.length),
+            React.createElement("div", { className: "text-xs text-purple-500 mt-0.5" }, "Unique users")
+          ),
+          loginStats[0] && React.createElement("div", { className: "bg-green-50 rounded-xl p-4" },
+            React.createElement("div", { className: "text-base font-bold text-green-700 truncate" }, loginStats[0].name || loginStats[0].email.split("@")[0]),
+            React.createElement("div", { className: "text-xs text-green-500 mt-0.5" }, "Most active · " + loginStats[0].count + " logins")
+          )
+        ),
+        React.createElement("div", { className: "overflow-x-auto rounded-xl border border-gray-100" },
+          React.createElement("table", { className: "w-full text-sm" },
+            React.createElement("thead", null,
+              React.createElement("tr", { className: "bg-gray-50 border-b border-gray-100" },
+                React.createElement("th", { className: "text-left py-2.5 px-3 text-xs font-semibold text-gray-500" }, "User"),
+                React.createElement("th", { className: "text-left py-2.5 px-3 text-xs font-semibold text-gray-500" }, "Total logins"),
+                React.createElement("th", { className: "text-left py-2.5 px-3 text-xs font-semibold text-gray-500" }, "Last login"),
+                React.createElement("th", { className: "text-left py-2.5 px-3 text-xs font-semibold text-gray-500" }, "Activity")
+              )
+            ),
+            React.createElement("tbody", null, loginStats.map((u, i) => {
+              const pct = loginStats[0].count > 0 ? Math.round((u.count / loginStats[0].count) * 100) : 0;
+              return React.createElement("tr", { key: u.email, className: "border-t border-gray-50 hover:bg-gray-50/60" },
+                React.createElement("td", { className: "py-2.5 px-3" },
+                  React.createElement("div", { className: "flex items-center gap-2" },
+                    React.createElement("div", {
+                      className: "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0",
+                      style: { background: i === 0 ? "#16a34a" : i === 1 ? "#2080BD" : i === 2 ? "#7c3aed" : "#94a3b8" }
+                    }, (u.name || u.email)[0].toUpperCase()),
+                    React.createElement("div", null,
+                      React.createElement("div", { className: "text-xs font-semibold text-gray-800" }, u.name || u.email.split("@")[0]),
+                      React.createElement("div", { className: "text-xs text-gray-400" }, u.email)
+                    )
+                  )
+                ),
+                React.createElement("td", { className: "py-2.5 px-3 text-sm font-bold text-gray-700" }, u.count),
+                React.createElement("td", { className: "py-2.5 px-3 text-xs text-gray-500" },
+                  u.last ? new Date(u.last).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"
+                ),
+                React.createElement("td", { className: "py-2.5 px-3 w-40" },
+                  React.createElement("div", { className: "h-1.5 bg-gray-100 rounded-full overflow-hidden" },
+                    React.createElement("div", { className: "h-full rounded-full", style: { width: pct + "%", background: i === 0 ? "#16a34a" : "#2080BD" } })
+                  )
+                )
+              );
+            }))
+          )
+        )
       )
     );
   }
@@ -5289,8 +5455,20 @@ var _unused = (() => {
       setView("oppDetail");
     };
     const getEmail = () => { var _a2; return ((_a2 = session == null ? void 0 : session.user) == null ? void 0 : _a2.email) || "unknown"; };
-    const updateClient = (u) => { setClients((prev) => prev.map((c) => c.id === u.id ? u : c)); logAudit(getEmail(), "update_client", "client", u.name || u.id, null); };
-    const updateOpp = (u) => { setOpps((prev) => prev.map((o) => o.id === u.id ? sanitizeOpp(u) : o)); logAudit(getEmail(), "update_opportunity", "opportunity", u.name || u.id, null); };
+    const updateClient = (u) => {
+      const old = clients.find(c => c.id === u.id);
+      const tracked = ["health", "arr", "tier", "csm", "status", "archived"];
+      const changes = old ? tracked.filter(k => String(old[k] || "") !== String(u[k] || "")).map(k => `${k}: "${old[k] || ""}"→"${u[k] || ""}"`) : [];
+      setClients((prev) => prev.map((c) => c.id === u.id ? u : c));
+      logAudit(getEmail(), "update_client", "client", u.name || u.id, changes.length ? changes.join("; ") : null);
+    };
+    const updateOpp = (u) => {
+      const old = opps.find(o => o.id === u.id);
+      const tracked = ["status", "value", "owner", "targetQtr", "name"];
+      const changes = old ? tracked.filter(k => String(old[k] || "") !== String(u[k] || "")).map(k => `${k}: "${old[k] || ""}"→"${u[k] || ""}"`) : [];
+      setOpps((prev) => prev.map((o) => o.id === u.id ? sanitizeOpp(u) : o));
+      logAudit(getEmail(), "update_opportunity", "opportunity", u.name || u.id, changes.length ? changes.join("; ") : null);
+    };
     const updateRels = (clientName, newContacts) => { setRels((prev) => ({ ...prev, [clientName]: newContacts })); logAudit(getEmail(), "update_relationships", "relationships", clientName, null); };
     const addClient = (c) => { setClients((prev) => [...prev, c]); logAudit(getEmail(), "add_client", "client", c.name || c.id, null); };
     const addOpp = (o) => { setOpps((prev) => [...prev, o]); logAudit(getEmail(), "add_opportunity", "opportunity", o.name || o.id, null); };
