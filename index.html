@@ -4606,6 +4606,7 @@ var _unused = (() => {
     const [filterAction, setFilterAction] = useState("all");
     const [searchEntity, setSearchEntity] = useState("");
     const [page, setPage] = useState(1);
+    const [loginSort, setLoginSort] = useState("logins-desc");
     var PAGE_SIZE = 25;
     useEffect(() => {
       if (!sbClient) { setLoading(false); return; }
@@ -4762,27 +4763,53 @@ var _unused = (() => {
         ),
         loginStats.length === 0
           ? React.createElement("div", { className: "py-8 text-center text-sm text-gray-400" }, "No login history yet.")
-          : React.createElement("div", { className: "overflow-x-auto rounded-xl border border-gray-100" },
-              React.createElement("table", { className: "w-full text-sm" },
-                React.createElement("thead", null,
-                  React.createElement("tr", { className: "bg-gray-50 border-b border-gray-100" },
-                    React.createElement("th", { className: "text-left py-2.5 px-3 text-xs font-semibold text-gray-500" }, "User"),
-                    React.createElement("th", { className: "text-left py-2.5 px-3 text-xs font-semibold text-gray-500" }, "Logins"),
-                    React.createElement("th", { className: "text-left py-2.5 px-3 text-xs font-semibold text-gray-500" }, "Last login")
-                  )
-                ),
-                React.createElement("tbody", null, loginStats.map(function(u, i) {
-                  return React.createElement("tr", { key: u.email, className: "border-t border-gray-50 hover:bg-gray-50" },
-                    React.createElement("td", { className: "py-2.5 px-3" },
-                      React.createElement("div", { className: "text-xs font-semibold text-gray-800" }, u.name || (u.email || "").split("@")[0]),
-                      React.createElement("div", { className: "text-xs text-gray-400" }, u.email)
-                    ),
-                    React.createElement("td", { className: "py-2.5 px-3 text-sm font-bold text-gray-700" }, u.count),
-                    React.createElement("td", { className: "py-2.5 px-3 text-xs text-gray-500" },
-                      u.last ? new Date(u.last).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"
+          : React.createElement("div", { className: "space-y-2" },
+              React.createElement("div", { className: "flex items-center gap-2" },
+                React.createElement("span", { className: "text-xs text-gray-400" }, "Sort by:"),
+                React.createElement("select", {
+                  value: loginSort, onChange: function(e) { setLoginSort(e.target.value); },
+                  className: "text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-600"
+                },
+                  React.createElement("option", { value: "user-asc" }, "User A \u2192 Z"),
+                  React.createElement("option", { value: "user-desc" }, "User Z \u2192 A"),
+                  React.createElement("option", { value: "logins-desc" }, "Logins: High \u2192 Low"),
+                  React.createElement("option", { value: "logins-asc" }, "Logins: Low \u2192 High"),
+                  React.createElement("option", { value: "last-desc" }, "Last Login: Latest first"),
+                  React.createElement("option", { value: "last-asc" }, "Last Login: Earliest first")
+                )
+              ),
+              React.createElement("div", { className: "overflow-x-auto rounded-xl border border-gray-100" },
+                React.createElement("table", { className: "w-full text-sm" },
+                  React.createElement("thead", null,
+                    React.createElement("tr", { className: "bg-gray-50 border-b border-gray-100" },
+                      React.createElement("th", { className: "text-left py-2.5 px-3 text-xs font-semibold text-gray-500" }, "User"),
+                      React.createElement("th", { className: "text-left py-2.5 px-3 text-xs font-semibold text-gray-500" }, "Logins"),
+                      React.createElement("th", { className: "text-left py-2.5 px-3 text-xs font-semibold text-gray-500" }, "Last login")
                     )
-                  );
-                }))
+                  ),
+                  React.createElement("tbody", null, loginStats.slice().sort(function(a, b) {
+                    var aName = (a.name || a.email || "").toLowerCase();
+                    var bName = (b.name || b.email || "").toLowerCase();
+                    if (loginSort === "user-asc") return aName < bName ? -1 : aName > bName ? 1 : 0;
+                    if (loginSort === "user-desc") return aName > bName ? -1 : aName < bName ? 1 : 0;
+                    if (loginSort === "logins-asc") return a.count - b.count;
+                    if (loginSort === "logins-desc") return b.count - a.count;
+                    if (loginSort === "last-asc") return (a.last || "") < (b.last || "") ? -1 : 1;
+                    if (loginSort === "last-desc") return (a.last || "") > (b.last || "") ? -1 : 1;
+                    return 0;
+                  }).map(function(u) {
+                    return React.createElement("tr", { key: u.email, className: "border-t border-gray-50 hover:bg-gray-50" },
+                      React.createElement("td", { className: "py-2.5 px-3" },
+                        React.createElement("div", { className: "text-xs font-semibold text-gray-800" }, u.name || (u.email || "").split("@")[0]),
+                        React.createElement("div", { className: "text-xs text-gray-400" }, u.email)
+                      ),
+                      React.createElement("td", { className: "py-2.5 px-3 text-sm font-bold text-gray-700" }, u.count.toLocaleString()),
+                      React.createElement("td", { className: "py-2.5 px-3 text-xs text-gray-500" },
+                        u.last ? new Date(u.last).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"
+                      )
+                    );
+                  }))
+                )
               )
             )
       )
