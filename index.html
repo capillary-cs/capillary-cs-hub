@@ -508,8 +508,8 @@ var _unused = (() => {
     const cfg = getSlackConfig();
     if (!cfg.enabled || !cfg.webhookUrl) return false;
     try {
-      const resp = await fetch(cfg.webhookUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-      return resp.ok;
+      await fetch(cfg.webhookUrl, { method: "POST", mode: "no-cors", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      return true;
     } catch(e) { console.warn("Slack alert failed:", e); return false; }
   }
 
@@ -3501,8 +3501,9 @@ var _unused = (() => {
     const sendTest = async function() {
       setTestStatus("sending");
       try {
-        var resp = await fetch(config.webhookUrl, {
+        await fetch(config.webhookUrl, {
           method: "POST",
+          mode: "no-cors",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ blocks: [
             { type: "header", text: { type: "plain_text", text: "🧪 CS Hub Test Alert", emoji: true } },
@@ -3510,7 +3511,7 @@ var _unused = (() => {
             { type: "context", elements: [{ type: "mrkdwn", text: "CS Hub • Test message sent at " + new Date().toLocaleString() }] }
           ]})
         });
-        setTestStatus(resp.ok ? "success" : "error");
+        setTestStatus("success");
       } catch(e) { setTestStatus("error"); }
       setTimeout(function() { setTestStatus(null); }, 4000);
     };
