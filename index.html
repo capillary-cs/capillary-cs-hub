@@ -525,7 +525,6 @@ var _unused = (() => {
         { type: "section", fields: [
           { type: "mrkdwn", text: `*Client:*\n${client.name}` },
           { type: "mrkdwn", text: `*Platform:*\n${client.platform === "inspire" ? "✦ Inspire" : "◈ Capillary"}` },
-          { type: "mrkdwn", text: `*ARR:*\n$${(Number(client.arr) || Number(client.aop) || 0).toLocaleString()}` },
           { type: "mrkdwn", text: `*Account Lead:*\n${client.execSponsor || "—"}` },
           { type: "mrkdwn", text: `*Health:*\n${health === "Green" ? "🟢" : health === "Yellow" ? "🟡" : health === "Red" ? "🔴" : "⚪"} ${health || "No data"}` },
           { type: "mrkdwn", text: `*Renewal Date:*\n${client.nextRenewal || "—"}${days !== null ? " (" + days + "d)" : ""}` },
@@ -551,7 +550,6 @@ var _unused = (() => {
           { type: "mrkdwn", text: `*Client:*\n${client.name}` },
           { type: "mrkdwn", text: `*Previous Health:*\n${previousHealth === "Green" ? "🟢" : "🟡"} ${previousHealth}` },
           { type: "mrkdwn", text: `*Current Health:*\n🔴 ${newHealth}` },
-          { type: "mrkdwn", text: `*ARR:*\n$${(Number(client.arr) || Number(client.aop) || 0).toLocaleString()}` },
           { type: "mrkdwn", text: `*Account Lead:*\n${client.execSponsor || "—"}` },
           { type: "mrkdwn", text: `*Renewal Date:*\n${client.nextRenewal || "—"}${days !== null ? " (" + days + "d)" : ""}` },
           { type: "mrkdwn", text: `*Updated by:*\n${updatedBy || "Unknown"}` }
