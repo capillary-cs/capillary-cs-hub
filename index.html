@@ -4470,6 +4470,7 @@ var _unused = (() => {
     const [editingTeamGoal, setEditingTeamGoal] = React.useState(false);
     const [goalInput, setGoalInput] = React.useState("");
     const [sortBy, setSortBy] = React.useState("arr-desc");
+    const [goalsFY, setGoalsFY] = React.useState("FY27");
     React.useEffect(() => {
       setFilterSegment(platformFilter || "all");
     }, [platformFilter]);
@@ -4533,7 +4534,7 @@ var _unused = (() => {
     const teamGoalVal = Number(teamGoals == null ? void 0 : teamGoals.fy27ARR) || 0;
     const currentARR = filteredClients.reduce((a, c) => a + clientARR(c), 0);
     const qualOpps = filteredOpps.filter((o) => QUAL_STAGES.includes(o.status));
-    const wonOpps = filteredOpps.filter((o) => o.status === "Closed-Won");
+    const wonOpps = filteredOpps.filter((o) => o.status === "Closed-Won" && (o.fiscalYear || "FY27") === goalsFY);
     const bookedRec = wonOpps.filter(isRecurring).reduce((a, o) => a + (Number(o.value) || 0), 0);
     const bookedOneTime = wonOpps.filter((o) => !isRecurring(o)).reduce((a, o) => a + (Number(o.value) || 0), 0);
     const qualPipelineRec = qualOpps.filter(isRecurring).reduce((a, o) => a + (Number(o.value) || 0), 0);
@@ -4547,7 +4548,7 @@ var _unused = (() => {
       const arr = clientARR(c);
       const goal = Number(c.arrGoal) || 0;
       const cOpps = allOpps.filter((o) => o.clientId === c.id);
-      const cWon = cOpps.filter((o) => o.status === "Closed-Won");
+      const cWon = cOpps.filter((o) => o.status === "Closed-Won" && (o.fiscalYear || "FY27") === goalsFY);
       const cQual = cOpps.filter((o) => QUAL_STAGES.includes(o.status));
       const cBooked = cWon.filter(isRecurring).reduce((a, o) => a + (Number(o.value) || 0), 0);
       const cQP = cQual.reduce((a, o) => a + (Number(o.value) || 0), 0);
@@ -4563,7 +4564,7 @@ var _unused = (() => {
         else catMix.onetime += v;
       });
       return { client: c, arr, goal, booked: cBooked, qualPipeline: cQP, gap: cGap, coverage: cCov, catMix, allOpps: cOpps, wonOpps: cWon, qualOpps: cQual };
-    }), [filteredClients, allOpps]);
+    }), [filteredClients, allOpps, goalsFY]);
     const teamMetrics = useMemo(() => {
       const map = {};
       allOpps.forEach((o) => {
@@ -4581,7 +4582,7 @@ var _unused = (() => {
         }
         if (o.status === "Closed-Won") {
           m.won++;
-          if (isRecurring(o)) m.booked += Number(o.value) || 0;
+          if (isRecurring(o) && (o.fiscalYear || "FY27") === goalsFY) m.booked += Number(o.value) || 0;
         }
         if (o.status === "Closed-Lost") m.lost++;
         if (QUAL_STAGES.includes(o.status)) m.qualPipeline += Number(o.value) || 0;
@@ -4594,7 +4595,7 @@ var _unused = (() => {
         const gap = Math.max(m.goal - m.arr, 0);
         return { ...m, clients: m.clients.size, gap, coverage: gap > 0 ? m.qualPipeline / gap : m.qualPipeline > 0 ? 99.9 : 0, attain: pct(m.arr, m.goal), winRate: pct(m.won, m.won + m.lost) };
       });
-    }, [allOpps, allActive, filterSegment]);
+    }, [allOpps, allActive, filterSegment, goalsFY]);
     const execSummary = useMemo(() => {
       const topGaps = [...clientMetrics].filter((m) => m.gap > 0).sort((a, b) => b.gap - a.gap).slice(0, 6);
       const atRiskClients = clientMetrics.filter((m) => (getCurrentHealth(m.client) || "").toLowerCase() === "red").sort((a, b) => b.arr - a.arr);
@@ -4652,7 +4653,7 @@ var _unused = (() => {
       /* @__PURE__ */ React.createElement("option", { value: "cat2" }, "Cat 2"),
       /* @__PURE__ */ React.createElement("option", { value: "cat3" }, "Cat 3"),
       /* @__PURE__ */ React.createElement("option", { value: "onetime" }, "One-time")
-    ), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1" }, [["all", "All"], ["green", "\u{1F7E2}"], ["yellow", "\u{1F7E1}"], ["red", "\u{1F534}"]].map(([v, l]) => /* @__PURE__ */ React.createElement(
+    ), /* @__PURE__ */ React.createElement("div", { className: "w-px h-5 bg-gray-200" }), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1.5 ml-auto" }, /* @__PURE__ */ React.createElement("span", { className: "text-xs font-semibold text-gray-500" }, "Won FY:"), ["FY26", "FY27"].map((fy) => /* @__PURE__ */ React.createElement("button", { key: fy, onClick: () => setGoalsFY(fy), style: { fontSize: 11, fontWeight: 700, padding: "2px 9px", borderRadius: 6, border: "1px solid", borderColor: goalsFY === fy ? "#2080BD" : "#e2e8f0", background: goalsFY === fy ? "#2080BD" : "#fff", color: goalsFY === fy ? "#fff" : "#94a3b8", cursor: "pointer" } }, fy))), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1" }, [["all", "All"], ["green", "\u{1F7E2}"], ["yellow", "\u{1F7E1}"], ["red", "\u{1F534}"]].map(([v, l]) => /* @__PURE__ */ React.createElement(
       "button",
       {
         key: v,
