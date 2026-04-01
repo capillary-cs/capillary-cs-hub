@@ -492,7 +492,7 @@ var _unused = (() => {
   }
   // === SLACK INTEGRATION ===
   const DB_KEY_SLACK = "capillary_crm_slack_config_v1";
-  const SLACK_DEFAULT = { webhookUrl: "", enabled: false, alerts: { churn: true, healthDrop: true, dealWon: true, weeklySummary: true, renewalCountdown: true } };
+  const SLACK_DEFAULT = { webhookUrl: "", enabled: false, alerts: { churn: true, healthDrop: true, dealWon: true, weeklySummary: true, renewalCountdown: true, dailyStandup: false, monthlySnapshot: false, noActivity: false } };
   let _slackConfigCache = null;
   function getSlackConfig() {
     if (_slackConfigCache) return _slackConfigCache;
@@ -630,17 +630,201 @@ var _unused = (() => {
     });
   }
 
-  function checkWeeklySlackAlerts(clients, opps) {
+  function slackDailyStandup(clients, opps) {
+    var cfg = getSlackConfig();
+    if (!cfg.alerts.dailyStandup) return;
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var active = clients.filter(function(c) { return !c.archived; });
+
+    // Overdue follow-ups
+    var overdueFollowUps = [];
+    opps.forEach(function(opp) {
+      (opp.activities || []).forEach(function(a) {
+        if (a.followUpDate && new Date(a.followUpDate + "T00:00:00") < today && !a.followUpCompleted) {
+          var cl = active.find(function(c) { return c.id === opp.clientId; });
+          if (cl) overdueFollowUps.push({ client: cl.name, note: a.note || "Follow-up", date: a.followUpDate });
+        }
+      });
+    });
+    overdueFollowUps.sort(function(a, b) { return a.date.localeCompare(b.date); });
+
+    // Red health clients
+    var redClients = active.filter(function(c) { return getCurrentHealth(c) === "Red"; });
+
+    // Renewals in next 7 days
+    var renewals7 = active.filter(function(c) { var d = daysUntil(c.nextRenewal); return d !== null && d >= 0 && d <= 7; }).sort(function(a, b) { return daysUntil(a.nextRenewal) - daysUntil(b.nextRenewal); });
+
+    var day = today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+    var lines = "*" + day + "*\n\n";
+
+    if (overdueFollowUps.length > 0) {
+      lines += "📋 *Overdue Follow-ups (" + overdueFollowUps.length + "):*\n";
+      overdueFollowUps.slice(0, 8).forEach(function(f) { lines += "• *" + f.client + "* — " + f.note + " _(due " + f.date + ")_\n"; });
+      if (overdueFollowUps.length > 8) lines += "• _...and " + (overdueFollowUps.length - 8) + " more_\n";
+    } else {
+      lines += "📋 *Overdue Follow-ups:* None ✅\n";
+    }
+
+    lines += "\n";
+
+    if (redClients.length > 0) {
+      lines += "🔴 *Red Health Clients (" + redClients.length + "):*\n";
+      redClients.forEach(function(c) { lines += "• *" + c.name + "*" + (c.churning ? " ⚠️ Churning" : "") + (c.nextRenewal ? " · Renewal " + c.nextRenewal + " (" + daysUntil(c.nextRenewal) + "d)" : "") + "\n"; });
+    } else {
+      lines += "🔴 *Red Health Clients:* None ✅\n";
+    }
+
+    lines += "\n";
+
+    if (renewals7.length > 0) {
+      lines += "⏰ *Renewals This Week (" + renewals7.length + "):*\n";
+      renewals7.forEach(function(c) { lines += "• *" + c.name + "* — " + c.nextRenewal + " (" + daysUntil(c.nextRenewal) + "d)" + (c.churning ? " ⚠️" : "") + "\n"; });
+    } else {
+      lines += "⏰ *Renewals This Week:* None\n";
+    }
+
+    sendSlackMessage({
+      blocks: [
+        { type: "header", text: { type: "plain_text", text: "🌅 CS Daily Standup", emoji: true } },
+        { type: "section", text: { type: "mrkdwn", text: lines } },
+        { type: "context", elements: [{ type: "mrkdwn", text: "CS Hub • " + active.length + " active clients • Auto-digest" }] }
+      ]
+    });
+  }
+
+  function slackMonthlySnapshot(clients, opps) {
+    var cfg = getSlackConfig();
+    if (!cfg.alerts.monthlySnapshot) return;
+    var active = clients.filter(function(c) { return !c.archived; });
+    var greenCount = 0, yellowCount = 0, redCount = 0, noCount = 0;
+    active.forEach(function(c) { var h = getCurrentHealth(c); if (h === "Green") greenCount++; else if (h === "Yellow") yellowCount++; else if (h === "Red") redCount++; else noCount++; });
+
+    var churning = active.filter(function(c) { return c.churning; });
+    var activeOpps = opps.filter(function(o) { return !["Closed-Won", "Closed-Lost"].includes(o.status); });
+    var pipelineVal = activeOpps.reduce(function(s, o) { return s + (o.value || 0); }, 0);
+    var won = opps.filter(function(o) { return o.status === "Closed-Won"; });
+    var lost = opps.filter(function(o) { return o.status === "Closed-Lost"; });
+
+    var now = new Date();
+    var monthName = now.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    var healthPct = active.length > 0 ? Math.round((greenCount / active.length) * 100) : 0;
+
+    var lines = "*Portfolio at a Glance — " + monthName + "*\n\n";
+    lines += "👥 *Active Clients:* " + active.length + "\n";
+    lines += "🟢 *Health:* " + greenCount + " Green · " + yellowCount + " Yellow · " + redCount + " Red · " + noCount + " No Data (" + healthPct + "% healthy)\n";
+    lines += "⚠️ *Churning:* " + (churning.length > 0 ? churning.length + " client" + (churning.length > 1 ? "s" : "") + " flagged" : "None ✅") + "\n";
+    lines += "💼 *Open Pipeline:* " + activeOpps.length + " opps · $" + pipelineVal.toLocaleString() + " total value\n";
+    lines += "🎉 *Closed-Won All Time:* " + won.length + " deals\n";
+    lines += "❌ *Closed-Lost All Time:* " + lost.length + " deals\n";
+
+    if (churning.length > 0) {
+      lines += "\n*⚠️ Churning Accounts:*\n";
+      churning.forEach(function(c) { lines += "• *" + c.name + "*" + (c.churnDate ? " — Churn date: " + c.churnDate : " — Churn date: Not set") + (c.nextRenewal ? " · Renewal: " + c.nextRenewal : "") + "\n"; });
+    }
+
+    var renewals90 = active.filter(function(c) { var d = daysUntil(c.nextRenewal); return d !== null && d >= 0 && d <= 90; }).sort(function(a, b) { return daysUntil(a.nextRenewal) - daysUntil(b.nextRenewal); });
+    if (renewals90.length > 0) {
+      lines += "\n*📅 Renewals Next 90 Days (" + renewals90.length + "):*\n";
+      renewals90.forEach(function(c) { var h = getCurrentHealth(c); var icon = h === "Green" ? "🟢" : h === "Yellow" ? "🟡" : h === "Red" ? "🔴" : "⚪"; lines += "• *" + c.name + "* — " + c.nextRenewal + " (" + daysUntil(c.nextRenewal) + "d) " + icon + (c.churning ? " ⚠️" : "") + "\n"; });
+    }
+
+    sendSlackMessage({
+      blocks: [
+        { type: "header", text: { type: "plain_text", text: "📋 Monthly CS Snapshot", emoji: true } },
+        { type: "section", text: { type: "mrkdwn", text: lines } },
+        { type: "context", elements: [{ type: "mrkdwn", text: "CS Hub • Monthly digest — " + monthName }] }
+      ]
+    });
+  }
+
+  function slackNoActivityAlert(clients, opps) {
+    var cfg = getSlackConfig();
+    if (!cfg.alerts.noActivity) return;
+    var active = clients.filter(function(c) { return !c.archived; });
+    var today = new Date();
+    var cutoff = new Date(today);
+    cutoff.setDate(cutoff.getDate() - 30);
+
+    var stale = [];
+    active.forEach(function(c) {
+      var clientOpps = opps.filter(function(o) { return o.clientId === c.id; });
+      var latestActivity = null;
+      clientOpps.forEach(function(opp) {
+        (opp.activities || []).forEach(function(a) {
+          if (a.date) {
+            var d = new Date(a.date + "T00:00:00");
+            if (!latestActivity || d > latestActivity) latestActivity = d;
+          }
+        });
+      });
+      if (!latestActivity || latestActivity < cutoff) {
+        var daysAgo = latestActivity ? Math.floor((today - latestActivity) / 86400000) : null;
+        stale.push({ name: c.name, health: getCurrentHealth(c), daysAgo: daysAgo, churning: c.churning, execSponsor: c.execSponsor });
+      }
+    });
+
+    if (stale.length === 0) return;
+
+    stale.sort(function(a, b) { return (b.daysAgo || 9999) - (a.daysAgo || 9999); });
+
+    var lines = "*" + stale.length + " client" + (stale.length > 1 ? "s" : "") + " with no logged activity in 30+ days:*\n\n";
+    stale.slice(0, 15).forEach(function(s) {
+      var h = s.health; var icon = h === "Green" ? "🟢" : h === "Yellow" ? "🟡" : h === "Red" ? "🔴" : "⚪";
+      lines += "• " + icon + " *" + s.name + "*";
+      if (s.daysAgo !== null) { lines += " — last activity " + s.daysAgo + "d ago"; }
+      else { lines += " — no activity recorded"; }
+      if (s.churning) lines += " ⚠️ Churning";
+      if (s.execSponsor) lines += " · Lead: " + s.execSponsor;
+      lines += "\n";
+    });
+    if (stale.length > 15) lines += "_...and " + (stale.length - 15) + " more — check CS Hub for the full list_";
+
+    sendSlackMessage({
+      blocks: [
+        { type: "header", text: { type: "plain_text", text: "⚠️ Inactive Accounts Alert", emoji: true } },
+        { type: "section", text: { type: "mrkdwn", text: lines } },
+        { type: "context", elements: [{ type: "mrkdwn", text: "CS Hub • No activity logged in 30+ days" }] }
+      ]
+    });
+  }
+
+  function checkScheduledSlackAlerts(clients, opps) {
     var cfg = getSlackConfig();
     if (!cfg.enabled || !cfg.webhookUrl) return;
     var now = new Date();
-    if (now.getDay() !== 1) return;
-    var lastSent = localStorage.getItem("capillary_slack_weekly_last");
     var today = now.toISOString().slice(0, 10);
-    if (lastSent === today) return;
-    localStorage.setItem("capillary_slack_weekly_last", today);
-    slackWeeklySummary(clients, opps);
-    slackRenewalCountdown(clients);
+    var dayOfWeek = now.getDay(); // 0=Sun, 1=Mon, 6=Sat
+    var dayOfMonth = now.getDate();
+
+    // Weekly alerts — Monday only
+    if (dayOfWeek === 1) {
+      var lastWeekly = localStorage.getItem("capillary_slack_weekly_last");
+      if (lastWeekly !== today) {
+        localStorage.setItem("capillary_slack_weekly_last", today);
+        slackWeeklySummary(clients, opps);
+        slackRenewalCountdown(clients);
+        slackNoActivityAlert(clients, opps);
+      }
+    }
+
+    // Daily standup — Mon–Fri
+    if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+      var lastDaily = localStorage.getItem("capillary_slack_daily_last");
+      if (lastDaily !== today) {
+        localStorage.setItem("capillary_slack_daily_last", today);
+        slackDailyStandup(clients, opps);
+      }
+    }
+
+    // Monthly snapshot — 1st of the month
+    if (dayOfMonth === 1) {
+      var lastMonthly = localStorage.getItem("capillary_slack_monthly_last");
+      if (lastMonthly !== today) {
+        localStorage.setItem("capillary_slack_monthly_last", today);
+        slackMonthlySnapshot(clients, opps);
+      }
+    }
   }
 
   function HealthDot({ health, size = 32, editable = false, onClick }) {
@@ -1272,7 +1456,7 @@ var _unused = (() => {
         }
       });
       if (cleaned.churning && !client.churning) {
-        slackChurnAlert(cleaned, "Current User");
+        slackChurnAlert(cleaned, currentUserEmail || "Unknown");
       }
       onUpdateClient(cleaned);
       setEditing(false);
@@ -3525,7 +3709,10 @@ var _unused = (() => {
       { key: "healthDrop", label: "Health Drops", desc: "When a client's health drops to Red", icon: "📉" },
       { key: "dealWon", label: "Deal Won", desc: "When an opportunity moves to Closed-Won", icon: "🎉" },
       { key: "weeklySummary", label: "Weekly Summary", desc: "Monday morning overview of health, churning, renewals", icon: "📊" },
-      { key: "renewalCountdown", label: "Renewal Countdown", desc: "Weekly list of renewals within 60 days", icon: "📅" }
+      { key: "renewalCountdown", label: "Renewal Countdown", desc: "Weekly list of renewals within 60 days", icon: "📅" },
+      { key: "dailyStandup", label: "Daily Standup Digest", desc: "Weekday mornings: overdue follow-ups, Red clients, renewals this week", icon: "🌅" },
+      { key: "monthlySnapshot", label: "Monthly Health Snapshot", desc: "1st of each month: full portfolio health, churn, pipeline summary", icon: "📋" },
+      { key: "noActivity", label: "Inactive Accounts Alert", desc: "Weekly flag of clients with no logged activity in 30+ days", icon: "⚠️" }
     ];
 
     return React.createElement("div", { className: "card" },
@@ -5393,7 +5580,7 @@ var _unused = (() => {
     }, [clients, opps, rels]);
     useEffect(() => {
       if (!dbLoaded || clients.length === 0) return;
-      checkWeeklySlackAlerts(clients, opps);
+      checkScheduledSlackAlerts(clients, opps);
     }, [dbLoaded]);
     useEffect(() => {
       if (!dbLoaded) return;
