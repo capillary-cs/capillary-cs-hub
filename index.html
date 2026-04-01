@@ -846,37 +846,39 @@ var _unused = (() => {
     var cfg = getSlackConfig();
     if (!cfg.enabled || !cfg.webhookUrl) return;
     var now = new Date();
-    var today = now.toISOString().slice(0, 10);
+    // Use local date string so timezone matches the user's calendar day
+    var today = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
     var dayOfWeek = now.getDay(); // 0=Sun, 1=Mon, 6=Sat
     var dayOfMonth = now.getDate();
+    var sent = cfg.lastSentDates || {};
+    var updated = false;
 
     // Weekly alerts — Monday only
-    if (dayOfWeek === 1) {
-      var lastWeekly = localStorage.getItem("capillary_slack_weekly_last");
-      if (lastWeekly !== today) {
-        localStorage.setItem("capillary_slack_weekly_last", today);
-        slackWeeklySummary(clients, opps);
-        slackRenewalCountdown(clients);
-        slackNoActivityAlert(clients, opps);
-      }
+    if (dayOfWeek === 1 && sent.weekly !== today) {
+      sent.weekly = today;
+      updated = true;
+      slackWeeklySummary(clients, opps);
+      slackRenewalCountdown(clients);
+      slackNoActivityAlert(clients, opps);
     }
 
     // Daily standup — Mon–Fri
-    if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-      var lastDaily = localStorage.getItem("capillary_slack_daily_last");
-      if (lastDaily !== today) {
-        localStorage.setItem("capillary_slack_daily_last", today);
-        slackDailyStandup(clients, opps);
-      }
+    if (dayOfWeek >= 1 && dayOfWeek <= 5 && sent.daily !== today) {
+      sent.daily = today;
+      updated = true;
+      slackDailyStandup(clients, opps);
     }
 
     // Monthly snapshot — 1st of the month
-    if (dayOfMonth === 1) {
-      var lastMonthly = localStorage.getItem("capillary_slack_monthly_last");
-      if (lastMonthly !== today) {
-        localStorage.setItem("capillary_slack_monthly_last", today);
-        slackMonthlySnapshot(clients, opps);
-      }
+    if (dayOfMonth === 1 && sent.monthly !== today) {
+      sent.monthly = today;
+      updated = true;
+      slackMonthlySnapshot(clients, opps);
+    }
+
+    // Persist updated sent dates back into the config (saved to Supabase)
+    if (updated) {
+      saveSlackConfig(Object.assign({}, cfg, { lastSentDates: sent }));
     }
   }
 
