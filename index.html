@@ -2287,7 +2287,7 @@ var _unused = (() => {
     const focusedOpp = oppFilter !== "all" ? leadOpps.find((o) => o.id === oppFilter) : null;
     const focusedClient = focusedOpp ? clients.find((c) => c.id === focusedOpp.clientId) : null;
 
-    const fmtD = (ds) => ds ? new Date(ds + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "\u2014";
+    const fmtD = (ds) => ds ? new Date(ds + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "\u2014";
     const toggleNote = (id) => setExpandedNotes((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
 
     const selStyle = { fontSize: 12, padding: "4px 10px", borderRadius: 8, border: "1px solid #e2e8f0", background: "#fff", color: "#334155" };
@@ -5740,6 +5740,7 @@ var _unused = (() => {
       setSelectedClientId(id);
       setClientBackView(fromView || view || "clients");
       setView("clientDetail");
+      requestAnimationFrame(() => { var m = document.querySelector(".main"); if (m) m.scrollTop = 0; });
     };
     const goToOpp = (id, backView = "clientDetail") => {
       setSelectedOppId(id);
