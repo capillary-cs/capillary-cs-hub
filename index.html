@@ -1814,7 +1814,7 @@ var _unused = (() => {
     today.setHours(0, 0, 0, 0);
 
     const formatDate = (dateStr) => {
-      return dateStr ? new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—";
+      return dateStr ? new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
     };
 
     return /* @__PURE__ */ React.createElement("div", { className: "space-y-4" },
