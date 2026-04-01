@@ -1135,7 +1135,7 @@ var _unused = (() => {
       ));
     })));
   }
-  function ClientDetailView({ client, opps, rels, onBack, onBackLabel, onUpdateClient, onUpdateRels, onSelectOpp, onAddOpp, onRemoveOpp, onArchive, calendarEvents, onAddCalendarEvent, onUpdateCalendarEvent, onDeleteCalendarEvent }) {
+  function ClientDetailView({ client, opps, rels, onBack, onBackLabel, onUpdateClient, onUpdateRels, onSelectOpp, onAddOpp, onRemoveOpp, onArchive, calendarEvents, onAddCalendarEvent, onUpdateCalendarEvent, onDeleteCalendarEvent, currentUserEmail }) {
     const { canEdit: globalCanEdit, canEditClient } = useRole();
     const canEdit = canEditClient ? canEditClient(client.id) : globalCanEdit;
     const [editing, setEditing] = useState(false);
@@ -1157,13 +1157,17 @@ var _unused = (() => {
       setEditingVisit(null);
       setVisitForm({ ...EMPTY_VISIT_FORM, clientId: client.id });
     }, [client.id]);
+    const healthAlertTimer = useRef(null);
     const cycleHealth = (m) => {
       const cycle = { null: "Green", Green: "Yellow", Yellow: "Red", Red: null };
       const oldHealth = form.healthHistory[m] || null;
       const newHealth = cycle[oldHealth];
       const updated = { ...form, healthHistory: { ...form.healthHistory, [m]: newHealth } };
+      if (healthAlertTimer.current) clearTimeout(healthAlertTimer.current);
       if ((oldHealth === "Green" || oldHealth === "Yellow") && newHealth === "Red") {
-        slackHealthDropAlert(updated, oldHealth, newHealth, "Current User");
+        healthAlertTimer.current = setTimeout(() => {
+          slackHealthDropAlert(updated, oldHealth, newHealth, currentUserEmail || "Unknown");
+        }, 3000);
       }
       setForm(updated);
       onUpdateClient(updated);
@@ -5669,7 +5673,8 @@ var _unused = (() => {
         calendarEvents,
         onAddCalendarEvent: addCalendarEvent,
         onUpdateCalendarEvent: updateCalendarEvent,
-        onDeleteCalendarEvent: deleteCalendarEvent
+        onDeleteCalendarEvent: deleteCalendarEvent,
+        currentUserEmail: getEmail()
       }
     ), view === "oppDetail" && selectedOpp && /* @__PURE__ */ React.createElement(OppDetailView, { opp: selectedOpp, client: oppClient, backView: oppBackView, onRemoveOpp: removeOpp, onBack: () => {
       setView(oppBackView);
