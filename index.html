@@ -499,9 +499,12 @@ var _unused = (() => {
     try { return JSON.parse(localStorage.getItem(DB_KEY_SLACK)) || { ...SLACK_DEFAULT }; } catch(e) { return { ...SLACK_DEFAULT }; }
   }
   function saveSlackConfig(cfg) {
-    _slackConfigCache = cfg;
-    localStorage.setItem(DB_KEY_SLACK, JSON.stringify(cfg));
-    saveToSupabase(DB_KEY_SLACK, cfg);
+    // Always preserve lastSentDates — never let a stale config snapshot erase them
+    var preserved = (_slackConfigCache && _slackConfigCache.lastSentDates) || cfg.lastSentDates || {};
+    var merged = Object.assign({}, cfg, { lastSentDates: preserved });
+    _slackConfigCache = merged;
+    localStorage.setItem(DB_KEY_SLACK, JSON.stringify(merged));
+    saveToSupabase(DB_KEY_SLACK, merged);
   }
 
   async function sendSlackMessage(payload) {
