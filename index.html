@@ -520,18 +520,18 @@ var _unused = (() => {
     const days = client.nextRenewal ? daysUntil(client.nextRenewal) : null;
     sendSlackMessage({
       blocks: [
-        { type: "header", text: { type: "plain_text", text: "🚨 Churn Alert", emoji: true } },
-        { type: "section", text: { type: "mrkdwn", text: `*${client.name}* has been flagged as churning` } },
+        { type: "header", text: { type: "plain_text", text: "Churn Alert", emoji: true } },
+        { type: "section", text: { type: "mrkdwn", text: "*" + client.name + "* has been flagged as churning" } },
+        { type: "divider" },
         { type: "section", fields: [
-          { type: "mrkdwn", text: `*Client:*\n${client.name}` },
-          { type: "mrkdwn", text: `*Platform:*\n${client.platform === "inspire" ? "✦ Inspire" : "◈ Capillary"}` },
-          { type: "mrkdwn", text: `*Account Lead:*\n${client.execSponsor || "—"}` },
-          { type: "mrkdwn", text: `*Health:*\n${health === "Green" ? "🟢" : health === "Yellow" ? "🟡" : health === "Red" ? "🔴" : "⚪"} ${health || "No data"}` },
-          { type: "mrkdwn", text: `*Renewal Date:*\n${client.nextRenewal || "—"}${days !== null ? " (" + days + "d)" : ""}` },
-          { type: "mrkdwn", text: `*Churn Date:*\n${client.churnDate || "Not set"}` },
-          { type: "mrkdwn", text: `*Flagged by:*\n${flaggedBy || "Unknown"}` }
+          { type: "mrkdwn", text: "*Client*\n" + client.name },
+          { type: "mrkdwn", text: "*Platform*\n" + (client.platform === "inspire" ? "Inspire" : "Capillary") },
+          { type: "mrkdwn", text: "*Account Lead*\n" + (client.execSponsor || "—") },
+          { type: "mrkdwn", text: "*Health*\n" + (health || "No data") },
+          { type: "mrkdwn", text: "*Renewal Date*\n" + (client.nextRenewal || "—") + (days !== null ? " (" + days + "d)" : "") },
+          { type: "mrkdwn", text: "*Churn Date*\n" + (client.churnDate || "Not set") }
         ]},
-        { type: "context", elements: [{ type: "mrkdwn", text: "CS Hub • Client Profile" }] }
+        { type: "context", elements: [{ type: "mrkdwn", text: "Flagged by " + (flaggedBy || "Unknown") + "  ·  CS Hub" }] }
       ]
     });
   }
@@ -544,17 +544,18 @@ var _unused = (() => {
     const days = client.nextRenewal ? daysUntil(client.nextRenewal) : null;
     sendSlackMessage({
       blocks: [
-        { type: "header", text: { type: "plain_text", text: "📉 Health Drop", emoji: true } },
-        { type: "section", text: { type: "mrkdwn", text: `*${client.name}* — ${previousHealth === "Green" ? "🟢" : "🟡"} ${previousHealth} → 🔴 ${newHealth}` } },
+        { type: "header", text: { type: "plain_text", text: "Health Drop — " + client.name, emoji: true } },
+        { type: "section", text: { type: "mrkdwn", text: "Health changed from *" + previousHealth + "* to *" + newHealth + "*" } },
+        { type: "divider" },
         { type: "section", fields: [
-          { type: "mrkdwn", text: `*Client:*\n${client.name}` },
-          { type: "mrkdwn", text: `*Previous Health:*\n${previousHealth === "Green" ? "🟢" : "🟡"} ${previousHealth}` },
-          { type: "mrkdwn", text: `*Current Health:*\n🔴 ${newHealth}` },
-          { type: "mrkdwn", text: `*Account Lead:*\n${client.execSponsor || "—"}` },
-          { type: "mrkdwn", text: `*Renewal Date:*\n${client.nextRenewal || "—"}${days !== null ? " (" + days + "d)" : ""}` },
-          { type: "mrkdwn", text: `*Updated by:*\n${updatedBy || "Unknown"}` }
+          { type: "mrkdwn", text: "*Client*\n" + client.name },
+          { type: "mrkdwn", text: "*Account Lead*\n" + (client.execSponsor || "—") },
+          { type: "mrkdwn", text: "*Previous Health*\n" + previousHealth },
+          { type: "mrkdwn", text: "*Current Health*\n" + newHealth },
+          { type: "mrkdwn", text: "*Renewal Date*\n" + (client.nextRenewal || "—") + (days !== null ? " (" + days + "d)" : "") },
+          { type: "mrkdwn", text: "*Updated by*\n" + (updatedBy || "Unknown") }
         ]},
-        { type: "context", elements: [{ type: "mrkdwn", text: "CS Hub • Client Profile" }] }
+        { type: "context", elements: [{ type: "mrkdwn", text: "CS Hub  ·  Client Profile" }] }
       ]
     });
   }
@@ -564,17 +565,18 @@ var _unused = (() => {
     if (!cfg.alerts.dealWon) return;
     sendSlackMessage({
       blocks: [
-        { type: "header", text: { type: "plain_text", text: "🎉 Deal Won!", emoji: true } },
-        { type: "section", text: { type: "mrkdwn", text: `*Closed-Won:* ${client ? client.name + " — " : ""}${opp.name}` } },
+        { type: "header", text: { type: "plain_text", text: "Deal Won — " + (client ? client.name : opp.name), emoji: true } },
+        { type: "section", text: { type: "mrkdwn", text: "*" + opp.name + "* has been marked Closed-Won" } },
+        { type: "divider" },
         { type: "section", fields: [
-          { type: "mrkdwn", text: `*Client:*\n${client ? client.name : "—"}` },
-          { type: "mrkdwn", text: `*Opportunity:*\n${opp.name}` },
-          { type: "mrkdwn", text: `*Value:*\n$${(opp.value || 0).toLocaleString()}` },
-          { type: "mrkdwn", text: `*Pipeline:*\n${opp.pipeline === "inspire" ? "✦ Inspire" : "◈ Capillary"}` },
-          { type: "mrkdwn", text: `*Owner:*\n${opp.owner || "—"}` },
-          { type: "mrkdwn", text: `*Close Date:*\n${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}` }
+          { type: "mrkdwn", text: "*Client*\n" + (client ? client.name : "—") },
+          { type: "mrkdwn", text: "*Opportunity*\n" + opp.name },
+          { type: "mrkdwn", text: "*Value*\n$" + (opp.value || 0).toLocaleString() },
+          { type: "mrkdwn", text: "*Pipeline*\n" + (opp.pipeline === "inspire" ? "Inspire" : "Capillary") },
+          { type: "mrkdwn", text: "*Owner*\n" + (opp.owner || "—") },
+          { type: "mrkdwn", text: "*Close Date*\n" + new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) }
         ]},
-        { type: "context", elements: [{ type: "mrkdwn", text: "CS Hub • Opportunity Detail" }] }
+        { type: "context", elements: [{ type: "mrkdwn", text: "CS Hub  ·  Opportunity Detail" }] }
       ]
     });
   }
@@ -587,18 +589,37 @@ var _unused = (() => {
     active.forEach(function(c) { var h = getCurrentHealth(c); if (h === "Green") greenCount++; else if (h === "Yellow") yellowCount++; else if (h === "Red") redCount++; else noCount++; });
     var churning = active.filter(function(c) { return c.churning; });
     var renewals90 = active.filter(function(c) { return c.nextRenewal && daysUntil(c.nextRenewal) <= 90 && daysUntil(c.nextRenewal) >= 0; }).sort(function(a, b) { return daysUntil(a.nextRenewal) - daysUntil(b.nextRenewal); });
+    var weekOf = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
-    var healthLine = "🟢 " + greenCount + " Green  🟡 " + yellowCount + " Yellow  🔴 " + redCount + " Red  ⚪ " + noCount + " No Data";
-    var churningLines = churning.length > 0 ? "\n\n*⚠️ " + churning.length + " client" + (churning.length > 1 ? "s" : "") + " flagged as churning:*\n" + churning.map(function(c) { return "• " + c.name + (c.churnDate ? " — Churn date: " + c.churnDate : " — Churn date: Not set"); }).join("\n") : "";
-    var renewalLines = renewals90.length > 0 ? "\n\n*📅 Renewals next 90 days: " + renewals90.length + "*\n" + renewals90.map(function(c) { return "• " + c.name + " — " + c.nextRenewal + " (" + daysUntil(c.nextRenewal) + "d)"; }).join("\n") : "\n\n*📅 No renewals in the next 90 days* ✅";
-
-    sendSlackMessage({
-      blocks: [
-        { type: "header", text: { type: "plain_text", text: "📊 CS Hub — Weekly Summary", emoji: true } },
-        { type: "section", text: { type: "mrkdwn", text: healthLine + churningLines + renewalLines } },
-        { type: "context", elements: [{ type: "mrkdwn", text: "CS Hub • " + active.length + " active clients • " + opps.length + " opportunities" }] }
+    var blocks = [];
+    blocks.push({ type: "header", text: { type: "plain_text", text: "Weekly CS Summary — " + weekOf, emoji: true } });
+    blocks.push({
+      type: "section",
+      fields: [
+        { type: "mrkdwn", text: "*Active Clients*\n" + active.length },
+        { type: "mrkdwn", text: "*Churning*\n" + (churning.length > 0 ? churning.length + " flagged" : "None") },
+        { type: "mrkdwn", text: "*Health Breakdown*\n" + greenCount + " Green  ·  " + yellowCount + " Yellow  ·  " + redCount + " Red  ·  " + noCount + " No Data" },
+        { type: "mrkdwn", text: "*Renewals (90d)*\n" + (renewals90.length > 0 ? renewals90.length + " upcoming" : "None") }
       ]
     });
+
+    if (churning.length > 0) {
+      blocks.push({ type: "divider" });
+      var churnLines = churning.map(function(c) { return "• *" + c.name + "*" + (c.churnDate ? "  —  Churn: " + c.churnDate : "  —  Churn date not set"); }).join("\n");
+      blocks.push({ type: "section", text: { type: "mrkdwn", text: "*At-Risk Accounts*\n" + churnLines } });
+    }
+
+    if (renewals90.length > 0) {
+      blocks.push({ type: "divider" });
+      var renewalLines = renewals90.map(function(c) { return "• *" + c.name + "*  —  " + c.nextRenewal + " (" + daysUntil(c.nextRenewal) + "d)  ·  " + (getCurrentHealth(c) || "No data") + (c.churning ? "  ·  Churning" : ""); }).join("\n");
+      blocks.push({ type: "section", text: { type: "mrkdwn", text: "*Renewals Next 90 Days*\n" + renewalLines } });
+    } else {
+      blocks.push({ type: "divider" });
+      blocks.push({ type: "section", text: { type: "mrkdwn", text: "*Renewals Next 90 Days*\nNone" } });
+    }
+
+    blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: "CS Hub  ·  " + active.length + " active clients  ·  " + opps.length + " opportunities" }] });
+    sendSlackMessage({ blocks: blocks });
   }
 
   function slackRenewalCountdown(clients) {
@@ -610,24 +631,28 @@ var _unused = (() => {
 
     if (renewals60.length === 0 && overdue.length === 0) return;
 
-    var lines = "";
-    if (overdue.length > 0) {
-      lines += "*🚨 Overdue (" + overdue.length + "):*\n" + overdue.map(function(c) { return "• " + c.name + " — " + c.nextRenewal + " (*" + Math.abs(daysUntil(c.nextRenewal)) + "d overdue*)" + (c.churning ? " ⚠️ CHURNING" : ""); }).join("\n") + "\n\n";
-    }
-    lines += "*📅 Renewing within 60 days (" + renewals60.length + "):*\n" + renewals60.map(function(c) {
-      var d = daysUntil(c.nextRenewal);
-      var health = getCurrentHealth(c);
-      var healthIcon = health === "Green" ? "🟢" : health === "Yellow" ? "🟡" : health === "Red" ? "🔴" : "⚪";
-      return "• *" + c.name + "* — $" + (Number(c.arr) || Number(c.aop) || 0).toLocaleString() + " ARR\n   Renewal: " + c.nextRenewal + " · " + d + " days · " + healthIcon + " " + (health || "No data") + (c.churning ? " · ⚠️ CHURNING" : "");
-    }).join("\n");
+    var blocks = [];
+    blocks.push({ type: "header", text: { type: "plain_text", text: "Renewal Countdown", emoji: true } });
 
-    sendSlackMessage({
-      blocks: [
-        { type: "header", text: { type: "plain_text", text: "📅 Renewal Countdown", emoji: true } },
-        { type: "section", text: { type: "mrkdwn", text: lines } },
-        { type: "context", elements: [{ type: "mrkdwn", text: "CS Hub • Renewals Tab" }] }
-      ]
-    });
+    if (overdue.length > 0) {
+      var overdueLines = overdue.map(function(c) {
+        return "• *" + c.name + "*  —  " + c.nextRenewal + "  (" + Math.abs(daysUntil(c.nextRenewal)) + "d overdue)" + (c.churning ? "  ·  Churning" : "");
+      }).join("\n");
+      blocks.push({ type: "section", text: { type: "mrkdwn", text: "*Overdue (" + overdue.length + ")*\n" + overdueLines } });
+      blocks.push({ type: "divider" });
+    }
+
+    if (renewals60.length > 0) {
+      var renewalLines = renewals60.map(function(c) {
+        var d = daysUntil(c.nextRenewal);
+        var health = getCurrentHealth(c);
+        return "• *" + c.name + "*  —  " + c.nextRenewal + " (" + d + "d)  ·  " + (health || "No data") + (c.churning ? "  ·  Churning" : "");
+      }).join("\n");
+      blocks.push({ type: "section", text: { type: "mrkdwn", text: "*Renewing Within 60 Days (" + renewals60.length + ")*\n" + renewalLines } });
+    }
+
+    blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: "CS Hub  ·  Renewals" }] });
+    sendSlackMessage({ blocks: blocks });
   }
 
   function slackDailyStandup(clients, opps) {
@@ -637,7 +662,6 @@ var _unused = (() => {
     today.setHours(0, 0, 0, 0);
     var active = clients.filter(function(c) { return !c.archived; });
 
-    // Overdue follow-ups
     var overdueFollowUps = [];
     opps.forEach(function(opp) {
       (opp.activities || []).forEach(function(a) {
@@ -649,48 +673,43 @@ var _unused = (() => {
     });
     overdueFollowUps.sort(function(a, b) { return a.date.localeCompare(b.date); });
 
-    // Red health clients
     var redClients = active.filter(function(c) { return getCurrentHealth(c) === "Red"; });
-
-    // Renewals in next 7 days
     var renewals7 = active.filter(function(c) { var d = daysUntil(c.nextRenewal); return d !== null && d >= 0 && d <= 7; }).sort(function(a, b) { return daysUntil(a.nextRenewal) - daysUntil(b.nextRenewal); });
-
     var day = today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
-    var lines = "*" + day + "*\n\n";
 
-    if (overdueFollowUps.length > 0) {
-      lines += "📋 *Overdue Follow-ups (" + overdueFollowUps.length + "):*\n";
-      overdueFollowUps.slice(0, 8).forEach(function(f) { lines += "• *" + f.client + "* — " + f.note + " _(due " + f.date + ")_\n"; });
-      if (overdueFollowUps.length > 8) lines += "• _...and " + (overdueFollowUps.length - 8) + " more_\n";
-    } else {
-      lines += "📋 *Overdue Follow-ups:* None ✅\n";
-    }
+    var blocks = [];
+    blocks.push({ type: "header", text: { type: "plain_text", text: "Daily Standup — " + day, emoji: true } });
 
-    lines += "\n";
-
-    if (redClients.length > 0) {
-      lines += "🔴 *Red Health Clients (" + redClients.length + "):*\n";
-      redClients.forEach(function(c) { lines += "• *" + c.name + "*" + (c.churning ? " ⚠️ Churning" : "") + (c.nextRenewal ? " · Renewal " + c.nextRenewal + " (" + daysUntil(c.nextRenewal) + "d)" : "") + "\n"; });
-    } else {
-      lines += "🔴 *Red Health Clients:* None ✅\n";
-    }
-
-    lines += "\n";
-
-    if (renewals7.length > 0) {
-      lines += "⏰ *Renewals This Week (" + renewals7.length + "):*\n";
-      renewals7.forEach(function(c) { lines += "• *" + c.name + "* — " + c.nextRenewal + " (" + daysUntil(c.nextRenewal) + "d)" + (c.churning ? " ⚠️" : "") + "\n"; });
-    } else {
-      lines += "⏰ *Renewals This Week:* None\n";
-    }
-
-    sendSlackMessage({
-      blocks: [
-        { type: "header", text: { type: "plain_text", text: "🌅 CS Daily Standup", emoji: true } },
-        { type: "section", text: { type: "mrkdwn", text: lines } },
-        { type: "context", elements: [{ type: "mrkdwn", text: "CS Hub • " + active.length + " active clients • Auto-digest" }] }
+    blocks.push({
+      type: "section",
+      fields: [
+        { type: "mrkdwn", text: "*Overdue Follow-ups*\n" + (overdueFollowUps.length > 0 ? overdueFollowUps.length + " items" : "None") },
+        { type: "mrkdwn", text: "*Red Health Clients*\n" + (redClients.length > 0 ? redClients.length + " clients" : "None") },
+        { type: "mrkdwn", text: "*Renewals This Week*\n" + (renewals7.length > 0 ? renewals7.length + " upcoming" : "None") }
       ]
     });
+
+    if (overdueFollowUps.length > 0) {
+      blocks.push({ type: "divider" });
+      var followUpLines = overdueFollowUps.slice(0, 8).map(function(f) { return "• *" + f.client + "*  —  " + f.note + "  _(due " + f.date + ")_"; }).join("\n");
+      if (overdueFollowUps.length > 8) followUpLines += "\n_...and " + (overdueFollowUps.length - 8) + " more_";
+      blocks.push({ type: "section", text: { type: "mrkdwn", text: "*Overdue Follow-ups*\n" + followUpLines } });
+    }
+
+    if (redClients.length > 0) {
+      blocks.push({ type: "divider" });
+      var redLines = redClients.map(function(c) { return "• *" + c.name + "*" + (c.churning ? "  ·  Churning" : "") + (c.nextRenewal ? "  ·  Renewal " + c.nextRenewal + " (" + daysUntil(c.nextRenewal) + "d)" : ""); }).join("\n");
+      blocks.push({ type: "section", text: { type: "mrkdwn", text: "*Red Health Clients*\n" + redLines } });
+    }
+
+    if (renewals7.length > 0) {
+      blocks.push({ type: "divider" });
+      var r7Lines = renewals7.map(function(c) { return "• *" + c.name + "*  —  " + c.nextRenewal + " (" + daysUntil(c.nextRenewal) + "d)" + (c.churning ? "  ·  Churning" : ""); }).join("\n");
+      blocks.push({ type: "section", text: { type: "mrkdwn", text: "*Renewals This Week*\n" + r7Lines } });
+    }
+
+    blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: "CS Hub  ·  " + active.length + " active clients  ·  Auto-digest" }] });
+    sendSlackMessage({ blocks: blocks });
   }
 
   function slackMonthlySnapshot(clients, opps) {
@@ -705,37 +724,68 @@ var _unused = (() => {
     var pipelineVal = activeOpps.reduce(function(s, o) { return s + (o.value || 0); }, 0);
     var won = opps.filter(function(o) { return o.status === "Closed-Won"; });
     var lost = opps.filter(function(o) { return o.status === "Closed-Lost"; });
+    var renewals90 = active.filter(function(c) { var d = daysUntil(c.nextRenewal); return d !== null && d >= 0 && d <= 90; }).sort(function(a, b) { return daysUntil(a.nextRenewal) - daysUntil(b.nextRenewal); });
 
     var now = new Date();
     var monthName = now.toLocaleDateString("en-US", { month: "long", year: "numeric" });
     var healthPct = active.length > 0 ? Math.round((greenCount / active.length) * 100) : 0;
 
-    var lines = "*Portfolio at a Glance — " + monthName + "*\n\n";
-    lines += "👥 *Active Clients:* " + active.length + "\n";
-    lines += "🟢 *Health:* " + greenCount + " Green · " + yellowCount + " Yellow · " + redCount + " Red · " + noCount + " No Data (" + healthPct + "% healthy)\n";
-    lines += "⚠️ *Churning:* " + (churning.length > 0 ? churning.length + " client" + (churning.length > 1 ? "s" : "") + " flagged" : "None ✅") + "\n";
-    lines += "💼 *Open Pipeline:* " + activeOpps.length + " opps · $" + pipelineVal.toLocaleString() + " total value\n";
-    lines += "🎉 *Closed-Won All Time:* " + won.length + " deals\n";
-    lines += "❌ *Closed-Lost All Time:* " + lost.length + " deals\n";
+    var blocks = [];
 
-    if (churning.length > 0) {
-      lines += "\n*⚠️ Churning Accounts:*\n";
-      churning.forEach(function(c) { lines += "• *" + c.name + "*" + (c.churnDate ? " — Churn date: " + c.churnDate : " — Churn date: Not set") + (c.nextRenewal ? " · Renewal: " + c.nextRenewal : "") + "\n"; });
-    }
+    // Header
+    blocks.push({ type: "header", text: { type: "plain_text", text: "Monthly CS Snapshot — " + monthName, emoji: true } });
 
-    var renewals90 = active.filter(function(c) { var d = daysUntil(c.nextRenewal); return d !== null && d >= 0 && d <= 90; }).sort(function(a, b) { return daysUntil(a.nextRenewal) - daysUntil(b.nextRenewal); });
-    if (renewals90.length > 0) {
-      lines += "\n*📅 Renewals Next 90 Days (" + renewals90.length + "):*\n";
-      renewals90.forEach(function(c) { var h = getCurrentHealth(c); var icon = h === "Green" ? "🟢" : h === "Yellow" ? "🟡" : h === "Red" ? "🔴" : "⚪"; lines += "• *" + c.name + "* — " + c.nextRenewal + " (" + daysUntil(c.nextRenewal) + "d) " + icon + (c.churning ? " ⚠️" : "") + "\n"; });
-    }
-
-    sendSlackMessage({
-      blocks: [
-        { type: "header", text: { type: "plain_text", text: "📋 Monthly CS Snapshot", emoji: true } },
-        { type: "section", text: { type: "mrkdwn", text: lines } },
-        { type: "context", elements: [{ type: "mrkdwn", text: "CS Hub • Monthly digest — " + monthName }] }
+    // Portfolio stats as two-column fields
+    blocks.push({
+      type: "section",
+      fields: [
+        { type: "mrkdwn", text: "*Active Clients*\n" + active.length },
+        { type: "mrkdwn", text: "*Portfolio Health*\n" + healthPct + "% healthy" },
+        { type: "mrkdwn", text: "*Health Breakdown*\n" + greenCount + " Green · " + yellowCount + " Yellow · " + redCount + " Red · " + noCount + " No Data" },
+        { type: "mrkdwn", text: "*Churning*\n" + (churning.length > 0 ? churning.length + " client" + (churning.length > 1 ? "s" : "") + " flagged" : "None") }
       ]
     });
+
+    blocks.push({ type: "divider" });
+
+    // Pipeline stats
+    blocks.push({
+      type: "section",
+      fields: [
+        { type: "mrkdwn", text: "*Open Pipeline*\n" + activeOpps.length + " opps · $" + pipelineVal.toLocaleString() },
+        { type: "mrkdwn", text: "*Outcomes (All Time)*\n" + won.length + " Won · " + lost.length + " Lost" }
+      ]
+    });
+
+    // Churning accounts list
+    if (churning.length > 0) {
+      blocks.push({ type: "divider" });
+      var churnLines = churning.map(function(c) {
+        var line = "• *" + c.name + "*";
+        line += c.churnDate ? "  —  Churn: " + c.churnDate : "  —  Churn date not set";
+        if (c.nextRenewal) line += "  ·  Renewal: " + c.nextRenewal;
+        return line;
+      }).join("\n");
+      blocks.push({ type: "section", text: { type: "mrkdwn", text: "*At-Risk Accounts*\n" + churnLines } });
+    }
+
+    // Renewals next 90 days
+    if (renewals90.length > 0) {
+      blocks.push({ type: "divider" });
+      var renewalLines = renewals90.map(function(c) {
+        var h = getCurrentHealth(c);
+        var healthLabel = h === "Green" ? "Green" : h === "Yellow" ? "Yellow" : h === "Red" ? "Red" : "—";
+        var line = "• *" + c.name + "*  —  " + c.nextRenewal + " (" + daysUntil(c.nextRenewal) + "d)";
+        line += "  ·  " + healthLabel;
+        if (c.churning) line += "  ·  Churning";
+        return line;
+      }).join("\n");
+      blocks.push({ type: "section", text: { type: "mrkdwn", text: "*Renewals Next 90 Days (" + renewals90.length + ")*\n" + renewalLines } });
+    }
+
+    blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: "CS Hub  ·  Monthly digest  ·  " + monthName }] });
+
+    sendSlackMessage({ blocks: blocks });
   }
 
   function slackNoActivityAlert(clients, opps) {
@@ -768,23 +818,26 @@ var _unused = (() => {
 
     stale.sort(function(a, b) { return (b.daysAgo || 9999) - (a.daysAgo || 9999); });
 
-    var lines = "*" + stale.length + " client" + (stale.length > 1 ? "s" : "") + " with no logged activity in 30+ days:*\n\n";
-    stale.slice(0, 15).forEach(function(s) {
-      var h = s.health; var icon = h === "Green" ? "🟢" : h === "Yellow" ? "🟡" : h === "Red" ? "🔴" : "⚪";
-      lines += "• " + icon + " *" + s.name + "*";
-      if (s.daysAgo !== null) { lines += " — last activity " + s.daysAgo + "d ago"; }
-      else { lines += " — no activity recorded"; }
-      if (s.churning) lines += " ⚠️ Churning";
-      if (s.execSponsor) lines += " · Lead: " + s.execSponsor;
-      lines += "\n";
-    });
-    if (stale.length > 15) lines += "_...and " + (stale.length - 15) + " more — check CS Hub for the full list_";
+    var staleLines = stale.slice(0, 15).map(function(s) {
+      var line = "• *" + s.name + "*";
+      line += s.daysAgo !== null ? "  —  last activity " + s.daysAgo + "d ago" : "  —  no activity recorded";
+      line += "  ·  " + (s.health || "No data");
+      if (s.churning) line += "  ·  Churning";
+      if (s.execSponsor) line += "  ·  Lead: " + s.execSponsor;
+      return line;
+    }).join("\n");
+    if (stale.length > 15) staleLines += "\n_...and " + (stale.length - 15) + " more — check CS Hub for the full list_";
 
     sendSlackMessage({
       blocks: [
-        { type: "header", text: { type: "plain_text", text: "⚠️ Inactive Accounts Alert", emoji: true } },
-        { type: "section", text: { type: "mrkdwn", text: lines } },
-        { type: "context", elements: [{ type: "mrkdwn", text: "CS Hub • No activity logged in 30+ days" }] }
+        { type: "header", text: { type: "plain_text", text: "Inactive Accounts — 30+ Days No Activity", emoji: true } },
+        { type: "section", fields: [
+          { type: "mrkdwn", text: "*Inactive Accounts*\n" + stale.length },
+          { type: "mrkdwn", text: "*Threshold*\n30 days with no logged activity" }
+        ]},
+        { type: "divider" },
+        { type: "section", text: { type: "mrkdwn", text: staleLines } },
+        { type: "context", elements: [{ type: "mrkdwn", text: "CS Hub  ·  Weekly digest" }] }
       ]
     });
   }
@@ -2157,7 +2210,7 @@ var _unused = (() => {
           row("Owner", opp.owner, React.createElement(React.Fragment, null, React.createElement("input", { type: "text", list: "opp-detail-owner-list", className: "text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 w-full focus:outline-none focus:ring-1 focus:ring-sky-500", value: form.owner || "", onChange: (e) => setForm({ ...form, owner: e.target.value }) }), React.createElement("datalist", { id: "opp-detail-owner-list" }, TEAM_ROSTER.map((n) => React.createElement("option", { key: n, value: n })))), 2),
           row("Category", opp.category, inp("category"), 3),
           row("Revenue Type", opp.retainerType || "ARR", /* @__PURE__ */ React.createElement("select", { value: form.retainerType || "ARR", onChange: (e) => setForm({ ...form, retainerType: e.target.value }), className: "text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 w-full focus:outline-none focus:ring-1 focus:ring-sky-500" }, /* @__PURE__ */ React.createElement("option", { value: "ARR" }, "ARR (Recurring)"), /* @__PURE__ */ React.createElement("option", { value: "One Time" }, "One-Time")), 4),
-          row("Target Qtr", opp.targetQtr, inp("targetQtr"), 5),
+          row("Target Qtr", opp.targetQtr ? "Q" + opp.targetQtr : "—", /* @__PURE__ */ React.createElement("select", { value: form.targetQtr || "", onChange: (e) => setForm({ ...form, targetQtr: e.target.value }), className: "text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 w-full focus:outline-none focus:ring-1 focus:ring-sky-500" }, /* @__PURE__ */ React.createElement("option", { value: "" }, "—"), ["1","2","3","4"].map((q) => /* @__PURE__ */ React.createElement("option", { key: q, value: q }, "Q" + q))), 5),
           row("Fiscal Year", opp.fiscalYear || "FY27", editing ? /* @__PURE__ */ React.createElement("select", { value: form.fiscalYear || "FY27", onChange: (e) => setForm({ ...form, fiscalYear: e.target.value }), className: "text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 w-full focus:outline-none focus:ring-1 focus:ring-sky-500" }, ["FY25", "FY26", "FY27", "FY28"].map((y) => /* @__PURE__ */ React.createElement("option", { key: y }, y))) : null, 6),
           row("Probability", opp.probability || "\u2014", /* @__PURE__ */ React.createElement("select", { value: form.probability || "", onChange: (e) => setForm({ ...form, probability: e.target.value }), className: "text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 w-full focus:outline-none focus:ring-1 focus:ring-sky-500" }, /* @__PURE__ */ React.createElement("option", { value: "" }, "\u2014 Select \u2014"), ["0%", "<25%", "25%", "50%", "75%", "100%"].map((p) => /* @__PURE__ */ React.createElement("option", { key: p }, p))), 7),
           row("Closing Fortnight", opp.closingFortnight, inp("closingFortnight"), 8),
@@ -3520,12 +3573,13 @@ var _unused = (() => {
     const [oppFilterCat, setOppFilterCat] = useState("all");
     const [oppFilterStage, setOppFilterStage] = useState("all");
     const [oppFilterQtr, setOppFilterQtr] = useState("all");
+    const [wonFY, setWonFY] = useState("FY27");
+    const OPP_QTRS = ["1", "2", "3", "4"];
     const oppShortCat = (cat) => { const c = (cat || "").toLowerCase(); if (c.includes("setup") || c.includes("one time")) return "Setup/OT"; if (c.includes("cat 1") || c.includes("inflation") || c.includes("variables")) return "Cat 1"; if (c.includes("cat 2") || c.includes("product") || c.includes("services upsell")) return "Cat 2"; if (c.includes("cat 3") || c.includes("new business") || c.includes("brand") || c.includes("market")) return "Cat 3"; return "Other"; };
     const activeClientIds = useMemo(() => new Set(clients.filter(c => !c.archived).map(c => c.id)), [clients]);
     const oppLeads = useMemo(() => [...new Set(opps.filter(o => activeClientIds.has(o.clientId) && !["Closed-Won","Closed-Lost"].includes(o.status)).map(o => o.owner).filter(name => name && TEAM_ROSTER.includes(name)))].sort(), [opps, activeClientIds]);
     const oppClients = useMemo(() => [...new Set(opps.filter(o => activeClientIds.has(o.clientId) && !["Closed-Won","Closed-Lost"].includes(o.status)).map(o => { const cl = clients.find(c => c.id === o.clientId); return cl ? cl.name : null; }).filter(Boolean))].sort(), [opps, clients, activeClientIds]);
     const oppCats = ["Cat 1", "Cat 2", "Cat 3", "Setup/OT"];
-    const oppQtrs = useMemo(() => [...new Set(opps.filter(o => activeClientIds.has(o.clientId) && o.targetQtr).map(o => o.targetQtr))].sort(), [opps, activeClientIds]);
     const filtered = opps.filter(function(o) {
       if (pipeline !== "all") { if (pipeline === "inspire" ? o.pipeline !== "inspire" : o.pipeline === "inspire") return false; }
       if (oppFilterLead !== "all" && o.owner !== oppFilterLead) return false;
@@ -3551,7 +3605,7 @@ var _unused = (() => {
       return acc;
     }, {});
     const activeOpps = filtered.filter((o) => !["Closed-Won", "Closed-Lost"].includes(o.status));
-    const wonOpps = filtered.filter((o) => o.status === "Closed-Won");
+    const wonOpps = filtered.filter((o) => o.status === "Closed-Won" && (o.fiscalYear || "FY27") === wonFY);
     const activeVal = activeOpps.reduce((a, o) => a + (Number(o.value) || 0), 0);
     const activeARR = activeOpps.filter((o) => (o.retainerType || "") !== "One Time" && !(o.category || "").toLowerCase().includes("setup") && !(o.category || "").toLowerCase().includes("one time")).reduce((a, o) => a + (Number(o.value) || 0), 0);
     const activeOT = activeVal - activeARR;
@@ -3658,7 +3712,26 @@ var _unused = (() => {
         style: pipeline === p ? { background: "#2080BD" } : {}
       },
       p === "all" ? "All" : p === "inspire" ? "\u2726 Inspire" : "\u25C8 Capillary"
-    )))), React.createElement("div", { className: "card no-print", style: { background: "#f8fafc", padding: "10px 16px" } }, React.createElement("div", { className: "flex items-center gap-4 flex-wrap" }, React.createElement("div", { className: "flex items-center gap-1.5" }, React.createElement("span", { style: { fontSize: 14 } }, "\uD83D\uDD0D"), React.createElement("span", { className: "text-xs font-bold text-gray-600 uppercase tracking-wide" }, "Filters")), React.createElement("div", { className: "flex items-center gap-2" }, React.createElement("span", { className: "text-xs font-semibold text-gray-500" }, "Account Lead:"), React.createElement("select", { value: oppFilterLead, onChange: function(e) { setOppFilterLead(e.target.value); }, style: { fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid #e2e8f0", background: "#fff", color: "#334155", fontWeight: 600 } }, React.createElement("option", { value: "all" }, "All"), oppLeads.map(function(l) { return React.createElement("option", { key: l, value: l }, l); }))), React.createElement("div", { className: "flex items-center gap-2" }, React.createElement("span", { className: "text-xs font-semibold text-gray-500" }, "Client:"), React.createElement("select", { value: oppFilterClient, onChange: function(e) { setOppFilterClient(e.target.value); }, style: { fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid #e2e8f0", background: "#fff", color: "#334155", fontWeight: 600 } }, React.createElement("option", { value: "all" }, "All"), oppClients.map(function(c) { return React.createElement("option", { key: c, value: c }, c); }))), React.createElement("div", { className: "flex items-center gap-2" }, React.createElement("span", { className: "text-xs font-semibold text-gray-500" }, "Category:"), React.createElement("select", { value: oppFilterCat, onChange: function(e) { setOppFilterCat(e.target.value); }, style: { fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid #e2e8f0", background: "#fff", color: "#334155", fontWeight: 600 } }, React.createElement("option", { value: "all" }, "All"), oppCats.map(function(c) { return React.createElement("option", { key: c, value: c }, c); }))), React.createElement("div", { className: "flex items-center gap-2" }, React.createElement("span", { className: "text-xs font-semibold text-gray-500" }, "Stage:"), React.createElement("select", { value: oppFilterStage, onChange: function(e) { setOppFilterStage(e.target.value); }, style: { fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid #e2e8f0", background: "#fff", color: "#334155", fontWeight: 600 } }, React.createElement("option", { value: "all" }, "All"), [...ACTIVE_STAGES, "Closed-Won", "Closed-Lost"].map(function(s) { return React.createElement("option", { key: s, value: s }, s); }))), oppQtrs.length > 0 && React.createElement("div", { className: "flex items-center gap-2" }, React.createElement("span", { className: "text-xs font-semibold text-gray-500" }, "Target Qtr:"), React.createElement("select", { value: oppFilterQtr, onChange: function(e) { setOppFilterQtr(e.target.value); }, style: { fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid #e2e8f0", background: "#fff", color: "#334155", fontWeight: 600 } }, React.createElement("option", { value: "all" }, "All"), oppQtrs.map(function(q) { return React.createElement("option", { key: q, value: q }, q); }))), (oppFilterLead !== "all" || oppFilterClient !== "all" || oppFilterCat !== "all" || oppFilterStage !== "all" || oppFilterQtr !== "all") && React.createElement("button", { onClick: function() { setOppFilterLead("all"); setOppFilterClient("all"); setOppFilterCat("all"); setOppFilterStage("all"); setOppFilterQtr("all"); }, className: "text-xs font-semibold text-sky-700 hover:text-sky-900 cursor-pointer" }, "\u2715 Clear"))), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-3 gap-3 md:grid-cols-6" }, /* @__PURE__ */ React.createElement("div", { className: "card text-center", style: { padding: "12px" } }, /* @__PURE__ */ React.createElement("div", { className: "text-xl font-bold", style: { color: "#2080BD" } }, fmt$(activeVal)), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 mt-0.5" }, "Active Pipeline"), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-300" }, "Total")), /* @__PURE__ */ React.createElement("div", { className: "card text-center", style: { padding: "12px", borderLeft: "3px solid #2080BD" } }, /* @__PURE__ */ React.createElement("div", { className: "text-lg font-bold", style: { color: "#2080BD" } }, fmt$(activeARR)), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 mt-0.5" }, "ARR Pipeline")), /* @__PURE__ */ React.createElement("div", { className: "card text-center", style: { padding: "12px", borderLeft: "3px solid #F3CF02" } }, /* @__PURE__ */ React.createElement("div", { className: "text-lg font-bold", style: { color: "#b8960a" } }, fmt$(activeOT)), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 mt-0.5" }, "One-Time Pipeline")), /* @__PURE__ */ React.createElement("div", { className: "card text-center", style: { padding: "12px" } }, /* @__PURE__ */ React.createElement("div", { className: "text-xl font-bold text-green-600" }, fmt$(wonVal)), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 mt-0.5" }, "Won Total"), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-300" }, fmt$(wonARR) + " ARR \xB7 " + fmt$(wonOT) + " OT")), /* @__PURE__ */ React.createElement("div", { className: "card text-center", style: { padding: "12px" } }, /* @__PURE__ */ React.createElement("div", { className: "text-xl font-bold text-gray-800" }, activeOpps.length), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 mt-0.5" }, "Active Opps")), /* @__PURE__ */ React.createElement("div", { className: "card text-center", style: { padding: "12px" } }, /* @__PURE__  */ React.createElement("div", { className: "text-xl font-bold text-gray-800" }, wonOpps.length), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 mt-0.5" }, "Deals Won"))), /* @__PURE__ */ React.createElement("div", { className: "kanban-scroll", style: { display: "grid", gridTemplateColumns: "repeat(5, minmax(200px, 1fr))", gap: "12px", alignItems: "start" } }, ACTIVE_STAGES.map((s) => /* @__PURE__ */ React.createElement(KanbanCol, { key: s, stage: s }))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(
+    )))), React.createElement("div", { className: "card no-print", style: { background: "#f8fafc", padding: "10px 16px" } }, React.createElement("div", { className: "flex items-center gap-4 flex-wrap" }, React.createElement("div", { className: "flex items-center gap-1.5" }, React.createElement("span", { style: { fontSize: 14 } }, "\uD83D\uDD0D"), React.createElement("span", { className: "text-xs font-bold text-gray-600 uppercase tracking-wide" }, "Filters")), React.createElement("div", { className: "flex items-center gap-2" }, React.createElement("span", { className: "text-xs font-semibold text-gray-500" }, "Account Lead:"), React.createElement("select", { value: oppFilterLead, onChange: function(e) { setOppFilterLead(e.target.value); }, style: { fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid #e2e8f0", background: "#fff", color: "#334155", fontWeight: 600 } }, React.createElement("option", { value: "all" }, "All"), oppLeads.map(function(l) { return React.createElement("option", { key: l, value: l }, l); }))), React.createElement("div", { className: "flex items-center gap-2" }, React.createElement("span", { className: "text-xs font-semibold text-gray-500" }, "Client:"), React.createElement("select", { value: oppFilterClient, onChange: function(e) { setOppFilterClient(e.target.value); }, style: { fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid #e2e8f0", background: "#fff", color: "#334155", fontWeight: 600 } }, React.createElement("option", { value: "all" }, "All"), oppClients.map(function(c) { return React.createElement("option", { key: c, value: c }, c); }))), React.createElement("div", { className: "flex items-center gap-2" }, React.createElement("span", { className: "text-xs font-semibold text-gray-500" }, "Category:"), React.createElement("select", { value: oppFilterCat, onChange: function(e) { setOppFilterCat(e.target.value); }, style: { fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid #e2e8f0", background: "#fff", color: "#334155", fontWeight: 600 } }, React.createElement("option", { value: "all" }, "All"), oppCats.map(function(c) { return React.createElement("option", { key: c, value: c }, c); }))), React.createElement("div", { className: "flex items-center gap-2" }, React.createElement("span", { className: "text-xs font-semibold text-gray-500" }, "Stage:"), React.createElement("select", { value: oppFilterStage, onChange: function(e) { setOppFilterStage(e.target.value); }, style: { fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid #e2e8f0", background: "#fff", color: "#334155", fontWeight: 600 } }, React.createElement("option", { value: "all" }, "All"), [...ACTIVE_STAGES, "Closed-Won", "Closed-Lost"].map(function(s) { return React.createElement("option", { key: s, value: s }, s); }))), React.createElement("div", { className: "flex items-center gap-2" }, React.createElement("span", { className: "text-xs font-semibold text-gray-500" }, "Target Qtr:"), React.createElement("select", { value: oppFilterQtr, onChange: function(e) { setOppFilterQtr(e.target.value); }, style: { fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid #e2e8f0", background: "#fff", color: "#334155", fontWeight: 600 } }, React.createElement("option", { value: "all" }, "All"), OPP_QTRS.map(function(q) { return React.createElement("option", { key: q, value: q }, "Q" + q); }))), (oppFilterLead !== "all" || oppFilterClient !== "all" || oppFilterCat !== "all" || oppFilterStage !== "all" || oppFilterQtr !== "all") && React.createElement("button", { onClick: function() { setOppFilterLead("all"); setOppFilterClient("all"); setOppFilterCat("all"); setOppFilterStage("all"); setOppFilterQtr("all"); }, className: "text-xs font-semibold text-sky-700 hover:text-sky-900 cursor-pointer" }, "\u2715 Clear"))), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-3 gap-3 md:grid-cols-6" }, /* @__PURE__ */ React.createElement("div", { className: "card text-center", style: { padding: "12px" } }, /* @__PURE__ */ React.createElement("div", { className: "text-xl font-bold", style: { color: "#2080BD" } }, fmt$(activeVal)), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 mt-0.5" }, "Active Pipeline"), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-300" }, "Total")), /* @__PURE__ */ React.createElement("div", { className: "card text-center", style: { padding: "12px", borderLeft: "3px solid #2080BD" } }, /* @__PURE__ */ React.createElement("div", { className: "text-lg font-bold", style: { color: "#2080BD" } }, fmt$(activeARR)), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 mt-0.5" }, "ARR Pipeline")), /* @__PURE__ */ React.createElement("div", { className: "card text-center", style: { padding: "12px", borderLeft: "3px solid #F3CF02" } }, /* @__PURE__ */ React.createElement("div", { className: "text-lg font-bold", style: { color: "#b8960a" } }, fmt$(activeOT)), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 mt-0.5" }, "One-Time Pipeline")), /* @__PURE__ */ React.createElement("div", { className: "card text-center", style: { padding: "12px" } },
+  /* @__PURE__ */ React.createElement("div", { className: "flex justify-center gap-1 mb-1" },
+    ["FY26","FY27"].map(function(fy) {
+      return /* @__PURE__ */ React.createElement("button", { key: fy, onClick: function(e) { e.stopPropagation(); setWonFY(fy); }, style: { fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 6, border: "1px solid", borderColor: wonFY === fy ? "#16a34a" : "#e2e8f0", background: wonFY === fy ? "#16a34a" : "#f8fafc", color: wonFY === fy ? "#fff" : "#94a3b8", cursor: "pointer" } }, fy);
+    })
+  ),
+  /* @__PURE__ */ React.createElement("div", { className: "text-xl font-bold text-green-600" }, fmt$(wonVal)),
+  /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 mt-0.5" }, "Won Total"),
+  /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-300" }, fmt$(wonARR) + " ARR \xB7 " + fmt$(wonOT) + " OT")
+),
+/* @__PURE__ */ React.createElement("div", { className: "card text-center", style: { padding: "12px" } }, /* @__PURE__ */ React.createElement("div", { className: "text-xl font-bold text-gray-800" }, activeOpps.length), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 mt-0.5" }, "Active Opps")),
+/* @__PURE__ */ React.createElement("div", { className: "card text-center", style: { padding: "12px" } },
+  /* @__PURE__ */ React.createElement("div", { className: "flex justify-center gap-1 mb-1" },
+    ["FY26","FY27"].map(function(fy) {
+      return /* @__PURE__ */ React.createElement("button", { key: fy, onClick: function(e) { e.stopPropagation(); setWonFY(fy); }, style: { fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 6, border: "1px solid", borderColor: wonFY === fy ? "#374151" : "#e2e8f0", background: wonFY === fy ? "#374151" : "#f8fafc", color: wonFY === fy ? "#fff" : "#94a3b8", cursor: "pointer" } }, fy);
+    })
+  ),
+  /* @__PURE__ */ React.createElement("div", { className: "text-xl font-bold text-gray-800" }, wonOpps.length),
+  /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 mt-0.5" }, "Deals Won")
+)), /* @__PURE__ */ React.createElement("div", { className: "kanban-scroll", style: { display: "grid", gridTemplateColumns: "repeat(5, minmax(200px, 1fr))", gap: "12px", alignItems: "start" } }, ACTIVE_STAGES.map((s) => /* @__PURE__ */ React.createElement(KanbanCol, { key: s, stage: s }))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: () => setShowClosed(!showClosed),
@@ -4031,7 +4104,7 @@ var _unused = (() => {
       if (!form.name.trim() || !form.clientId) return;
       onAdd({ ...form, id: "opp_" + Date.now(), lastUpdated: (/* @__PURE__ */ new Date()).toLocaleDateString() });
     };
-    return /* @__PURE__ */ React.createElement(ModalWrap, { title: "Add Opportunity", onClose }, /* @__PURE__ */ React.createElement("div", { className: "mb-3" }, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Client"), /* @__PURE__ */ React.createElement("select", { className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none", value: form.clientId, onChange: (e) => setForm({ ...form, clientId: e.target.value }) }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Select client\u2026"), activeClients.map((c) => /* @__PURE__ */ React.createElement("option", { key: c.id, value: c.id }, c.name)))), inp("name", "Opportunity Name"), /* @__PURE__ */ React.createElement("div", { className: "mb-3" }, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Category"), /* @__PURE__ */ React.createElement("select", { className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-sky-500", value: form.category, onChange: (e) => setForm({ ...form, category: e.target.value }) }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Select category\u2026"), /* @__PURE__ */ React.createElement("option", { value: "Cat 1 - Inflation / Variables / Renewal Upsell" }, "Cat 1 \u2014 Inflation / Variables / Renewal Upsell"), /* @__PURE__ */ React.createElement("option", { value: "Cat 2 - Product and Services Upsell" }, "Cat 2 \u2014 Product and Services Upsell"), /* @__PURE__ */ React.createElement("option", { value: "Cat 3 - New Business Unit / Brand / Market Addition" }, "Cat 3 \u2014 New Business Unit / Brand / Market Addition"), /* @__PURE__ */ React.createElement("option", { value: "Setup / CR - One Time Revenue" }, "Setup / CR \u2014 One Time Revenue"))), React.createElement("div", { className: "mb-3" }, React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Owner"), React.createElement("input", { type: "text", list: "opp-owner-list", className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-sky-500", value: form.owner || "", onChange: (e) => setForm({ ...form, owner: e.target.value }) }), React.createElement("datalist", { id: "opp-owner-list" }, TEAM_ROSTER.map((n) => React.createElement("option", { key: n, value: n })))), inp("value", "Value ($)", "number"), /* @__PURE__ */ React.createElement("div", { className: "mb-3" }, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Revenue Type"), /* @__PURE__ */ React.createElement("select", { className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-sky-500", value: form.retainerType || "ARR", onChange: (e) => setForm({ ...form, retainerType: e.target.value }) }, /* @__PURE__ */ React.createElement("option", { value: "ARR" }, "ARR (Recurring)"), /* @__PURE__ */ React.createElement("option", { value: "One Time" }, "One-Time"))), /* @__PURE__ */ React.createElement("div", { className: "mb-3" }, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Status"), /* @__PURE__ */ React.createElement("select", { className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none", value: form.status, onChange: (e) => setForm({ ...form, status: e.target.value }) }, STATUSES.map((s) => /* @__PURE__ */ React.createElement("option", { key: s }, s)))), /* @__PURE__ */ React.createElement("div", { className: "mb-3" }, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Pipeline"), /* @__PURE__ */ React.createElement("select", { className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none", value: form.pipeline, onChange: (e) => setForm({ ...form, pipeline: e.target.value }) }, /* @__PURE__ */ React.createElement("option", { value: "capillary" }, "\u25C8 Capillary"), /* @__PURE__ */ React.createElement("option", { value: "inspire" }, "\u2726 Inspire"))), inp("targetQtr", "Target Quarter"), /* @__PURE__ */ React.createElement("div", { className: "mb-3" }, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Fiscal Year"), /* @__PURE__ */ React.createElement("select", { className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-sky-500", value: form.fiscalYear || "FY27", onChange: (e) => setForm({ ...form, fiscalYear: e.target.value }) }, ["FY25", "FY26", "FY27", "FY28"].map((y) => /* @__PURE__ */ React.createElement("option", { key: y }, y)))), /* @__PURE__ */ React.createElement("div", { className: "mb-3" }, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Probability"), /* @__PURE__ */ React.createElement("select", { className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-sky-500", value: form.probability || "", onChange: (e) => setForm({ ...form, probability: e.target.value }) }, /* @__PURE__ */ React.createElement("option", { value: "" }, "\u2014 Select \u2014"), ["0%", "<25%", "25%", "50%", "75%", "100%"].map((p) => /* @__PURE__ */ React.createElement("option", { key: p }, p)))), /* @__PURE__ */ React.createElement("div", { className: "mb-3" }, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Insights"), /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement(ModalWrap, { title: "Add Opportunity", onClose }, /* @__PURE__ */ React.createElement("div", { className: "mb-3" }, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Client"), /* @__PURE__ */ React.createElement("select", { className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none", value: form.clientId, onChange: (e) => setForm({ ...form, clientId: e.target.value }) }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Select client\u2026"), activeClients.map((c) => /* @__PURE__ */ React.createElement("option", { key: c.id, value: c.id }, c.name)))), inp("name", "Opportunity Name"), /* @__PURE__ */ React.createElement("div", { className: "mb-3" }, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Category"), /* @__PURE__ */ React.createElement("select", { className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-sky-500", value: form.category, onChange: (e) => setForm({ ...form, category: e.target.value }) }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Select category\u2026"), /* @__PURE__ */ React.createElement("option", { value: "Cat 1 - Inflation / Variables / Renewal Upsell" }, "Cat 1 \u2014 Inflation / Variables / Renewal Upsell"), /* @__PURE__ */ React.createElement("option", { value: "Cat 2 - Product and Services Upsell" }, "Cat 2 \u2014 Product and Services Upsell"), /* @__PURE__ */ React.createElement("option", { value: "Cat 3 - New Business Unit / Brand / Market Addition" }, "Cat 3 \u2014 New Business Unit / Brand / Market Addition"), /* @__PURE__ */ React.createElement("option", { value: "Setup / CR - One Time Revenue" }, "Setup / CR \u2014 One Time Revenue"))), React.createElement("div", { className: "mb-3" }, React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Owner"), React.createElement("input", { type: "text", list: "opp-owner-list", className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-sky-500", value: form.owner || "", onChange: (e) => setForm({ ...form, owner: e.target.value }) }), React.createElement("datalist", { id: "opp-owner-list" }, TEAM_ROSTER.map((n) => React.createElement("option", { key: n, value: n })))), inp("value", "Value ($)", "number"), /* @__PURE__ */ React.createElement("div", { className: "mb-3" }, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Revenue Type"), /* @__PURE__ */ React.createElement("select", { className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-sky-500", value: form.retainerType || "ARR", onChange: (e) => setForm({ ...form, retainerType: e.target.value }) }, /* @__PURE__ */ React.createElement("option", { value: "ARR" }, "ARR (Recurring)"), /* @__PURE__ */ React.createElement("option", { value: "One Time" }, "One-Time"))), /* @__PURE__ */ React.createElement("div", { className: "mb-3" }, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Status"), /* @__PURE__ */ React.createElement("select", { className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none", value: form.status, onChange: (e) => setForm({ ...form, status: e.target.value }) }, STATUSES.map((s) => /* @__PURE__ */ React.createElement("option", { key: s }, s)))), /* @__PURE__ */ React.createElement("div", { className: "mb-3" }, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Pipeline"), /* @__PURE__ */ React.createElement("select", { className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none", value: form.pipeline, onChange: (e) => setForm({ ...form, pipeline: e.target.value }) }, /* @__PURE__ */ React.createElement("option", { value: "capillary" }, "\u25C8 Capillary"), /* @__PURE__ */ React.createElement("option", { value: "inspire" }, "\u2726 Inspire"))), /* @__PURE__ */ React.createElement("div", { className: "mb-3" }, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Target Quarter"), /* @__PURE__ */ React.createElement("select", { className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-sky-500", value: form.targetQtr || "", onChange: (e) => setForm({ ...form, targetQtr: e.target.value }) }, /* @__PURE__ */ React.createElement("option", { value: "" }, "— Select —"), ["1","2","3","4"].map((q) => /* @__PURE__ */ React.createElement("option", { key: q, value: q }, "Q" + q)))), /* @__PURE__ */ React.createElement("div", { className: "mb-3" }, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Fiscal Year"), /* @__PURE__ */ React.createElement("select", { className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-sky-500", value: form.fiscalYear || "FY27", onChange: (e) => setForm({ ...form, fiscalYear: e.target.value }) }, ["FY25", "FY26", "FY27", "FY28"].map((y) => /* @__PURE__ */ React.createElement("option", { key: y }, y)))), /* @__PURE__ */ React.createElement("div", { className: "mb-3" }, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Probability"), /* @__PURE__ */ React.createElement("select", { className: "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-sky-500", value: form.probability || "", onChange: (e) => setForm({ ...form, probability: e.target.value }) }, /* @__PURE__ */ React.createElement("option", { value: "" }, "\u2014 Select \u2014"), ["0%", "<25%", "25%", "50%", "75%", "100%"].map((p) => /* @__PURE__ */ React.createElement("option", { key: p }, p)))), /* @__PURE__ */ React.createElement("div", { className: "mb-3" }, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-semibold text-gray-500 block mb-1" }, "Insights"), /* @__PURE__ */ React.createElement(
       "textarea",
       {
         rows: 3,
