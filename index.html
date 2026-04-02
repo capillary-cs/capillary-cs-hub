@@ -1400,6 +1400,8 @@ var _unused = (() => {
       setShowVisitModal(false);
       setEditingVisit(null);
       setVisitForm({ ...EMPTY_VISIT_FORM, clientId: client.id });
+      var m = document.querySelector(".main");
+      if (m) m.scrollTop = 0;
     }, [client.id]);
     const healthAlertTimer = useRef(null);
     const setHealth = (m, newHealth) => {
@@ -5740,7 +5742,6 @@ var _unused = (() => {
       setSelectedClientId(id);
       setClientBackView(fromView || view || "clients");
       setView("clientDetail");
-      requestAnimationFrame(() => { var m = document.querySelector(".main"); if (m) m.scrollTop = 0; });
     };
     const goToOpp = (id, backView = "clientDetail") => {
       setSelectedOppId(id);
