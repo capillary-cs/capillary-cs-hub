@@ -251,7 +251,7 @@ console.log('Farming Goals feature loaded. Use window.FarmingGoalsFeature to acc
 </script>
 <script>
 var _unused = (() => {
-  const { useState, useEffect, useMemo, useCallback, useRef } = React;
+  const { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } = React;
   const RoleCtx = React.createContext({ role: "viewer", canEdit: false, isAdmin: false, isPM: false, isNPSEditor: false, assignedAccounts: [], canEditClient: function() { return false; } });
   const useRole = () => React.useContext(RoleCtx);
   class ErrorBoundary extends React.Component {
@@ -1393,6 +1393,10 @@ var _unused = (() => {
     const [editingVisit, setEditingVisit] = useState(null);
     const EMPTY_VISIT_FORM = { clientId: client.id, type: "F2F Meeting", city: "", startDate: "", endDate: "", attendees: [], notes: "", clientAvailability: false };
     const [visitForm, setVisitForm] = useState(EMPTY_VISIT_FORM);
+    useLayoutEffect(() => {
+      var m = document.querySelector(".main");
+      if (m) m.scrollTop = 0;
+    }, [client.id]);
     useEffect(() => {
       setForm({ ...client });
       setEditing(false);
@@ -1400,8 +1404,6 @@ var _unused = (() => {
       setShowVisitModal(false);
       setEditingVisit(null);
       setVisitForm({ ...EMPTY_VISIT_FORM, clientId: client.id });
-      var m = document.querySelector(".main");
-      if (m) m.scrollTop = 0;
     }, [client.id]);
     const healthAlertTimer = useRef(null);
     const setHealth = (m, newHealth) => {
