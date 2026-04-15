@@ -1667,7 +1667,7 @@ console.log('Farming Goals feature loaded. Use window.FarmingGoalsFeature to acc
         /* @__PURE__ */ React.createElement("td", { className: "py-3 px-4" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, item._client && /* @__PURE__ */ React.createElement(HealthDot, { health: getCurrentHealth(item._client), size: 10 }), /* @__PURE__ */ React.createElement("span", { className: "font-semibold text-xs text-gray-700" }, item.clientName))),
         /* @__PURE__ */ React.createElement("td", { className: "py-3 px-4" }, /* @__PURE__ */ React.createElement("span", { className: "text-xs bg-blue-50 text-blue-600 font-semibold rounded-md px-2 py-0.5" }, item.quarter)),
         /* @__PURE__ */ React.createElement("td", { className: "py-3 px-4 text-xs text-gray-500" }, item.assignee || "\u2014"),
-        /* @__PURE__ */ React.createElement("td", { className: "py-3 px-4" }, item.completed ? /* @__PURE__ */ React.createElement("span", { className: "text-xs font-medium text-green-600" }, "\u2713 ", item.dueDate || "Done") : item.dueDate ? /* @__PURE__ */ React.createElement("span", { className: `text-xs font-medium ${isOverdue ? "text-red-500" : "text-gray-500"}` }, isOverdue && "\u26A0\uFE0F ", item.dueDate) : /* @__PURE__ */ React.createElement("span", { className: "text-gray-300 text-xs" }, "\u2014"))
+        /* @__PURE__ */ React.createElement("td", { className: "py-3 px-4" }, item.dueDate ? /* @__PURE__ */ React.createElement("span", { className: `text-xs font-medium ${isOverdue ? "text-red-500" : "text-gray-500"}` }, isOverdue && "\u26A0\uFE0F ", item.dueDate) : /* @__PURE__ */ React.createElement("span", { className: "text-gray-300 text-xs" }, "\u2014"))
       );
     })))));
   }
