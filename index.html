@@ -3615,7 +3615,6 @@ var _unused = (() => {
       acc[s] = filtered.filter((o) => o.status === s);
       return acc;
     }, {});
-    byStatus["Closed-Won"] = wonOpps;
     const activeOpps = filtered.filter((o) => !["Closed-Won", "Closed-Lost"].includes(o.status));
     // Won deals computed independently of stage filter so Closed-Won deals are never hidden by an active stage filter
     const wonOpps = opps.filter(function(o) {
@@ -3627,6 +3626,7 @@ var _unused = (() => {
       if (oppFilterCat !== "all" && oppShortCat(o.category) !== oppFilterCat) return false;
       return true;
     });
+    byStatus["Closed-Won"] = wonOpps;
     const activeVal = activeOpps.reduce((a, o) => a + (Number(o.value) || 0), 0);
     const activeARR = activeOpps.filter((o) => (o.retainerType || "") !== "One Time" && !(o.category || "").toLowerCase().includes("setup") && !(o.category || "").toLowerCase().includes("one time")).reduce((a, o) => a + (Number(o.value) || 0), 0);
     const activeOT = activeVal - activeARR;
