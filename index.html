@@ -2396,7 +2396,7 @@ var _unused = (() => {
               /* @__PURE__ */ React.createElement("tbody", null,
                 filtered.map((a) => {
                   const followUpDate = a.followUpDate ? new Date(a.followUpDate + "T00:00:00") : null;
-                  const isOverdue = followUpDate && followUpDate < now;
+                  const isOverdue = followUpDate && followUpDate < now && !a.followUpCompleted;
                   const isExpanded = expandedNotes.has(a.id);
                   const longNote = (a.notes || "").length > 120 || a.nextSteps;
                   return /* @__PURE__ */ React.createElement("tr", { key: a.id, className: "border-b border-gray-50 hover:bg-gray-50 align-top" },
