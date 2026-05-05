@@ -2277,9 +2277,12 @@ var _unused = (() => {
       .filter((a) => !search.trim() || [a.notes, a.nextSteps, a.opp?.name, a.client?.name].some((f) => (f || "").toLowerCase().includes(search.toLowerCase())))
       .sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    const overdue = leadOpps.flatMap((opp) =>
-      (opp.activities || []).filter((a) => a.followUpDate && new Date(a.followUpDate + "T00:00:00") < now && !a.followUpCompleted)
-    );
+    const overdue = leadOpps.flatMap((opp) => {
+      const cl = clients.find((c) => c.id === opp.clientId);
+      return (opp.activities || [])
+        .filter((a) => a.followUpDate && new Date(a.followUpDate + "T00:00:00") < now && !a.followUpCompleted)
+        .map((a) => ({ ...a, opp, client: cl }));
+    });
 
     const dropdownOpps = clientFilter === "all" ? leadOpps : leadOpps.filter((o) => o.clientId === clientFilter);
     const hasFilters = clientFilter !== "all" || typeFilter !== "all" || oppFilter !== "all" || dateFilter !== "999999" || search.trim() !== "";
@@ -2413,7 +2416,9 @@ var _unused = (() => {
                       a.outcome && /* @__PURE__ */ React.createElement("span", { className: "text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap", style: { background: a.outcome === "Positive" ? "#dcfce7" : a.outcome === "Neutral" ? "#f3f4f6" : "#fee2e2", color: a.outcome === "Positive" ? "#15803d" : a.outcome === "Neutral" ? "#374151" : "#991b1b" } }, a.outcome)
                     ),
                     /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3" },
-                      followUpDate && /* @__PURE__ */ React.createElement("span", { className: "text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap", style: { background: isOverdue ? "#fee2e2" : "#f0fdf4", color: isOverdue ? "#991b1b" : "#166534" } }, isOverdue ? "\u26A0\uFE0F " : "", "Due: ", fmtD(a.followUpDate))
+                      a.followUpCompleted
+                        ? /* @__PURE__ */ React.createElement("span", { className: "text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap", style: { background: "#dcfce7", color: "#15803d" } }, "✓ Done")
+                        : followUpDate && /* @__PURE__ */ React.createElement("span", { className: "text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap", style: { background: isOverdue ? "#fee2e2" : "#f0fdf4", color: isOverdue ? "#991b1b" : "#166534" } }, isOverdue ? "⚠️ " : "", "Due: ", fmtD(a.followUpDate))
                     )
                   );
                 })
