@@ -2172,7 +2172,7 @@ var _unused = (() => {
     );
     const row = (label, value, editEl, idx) => /* @__PURE__ */ React.createElement("div", { className: "flex gap-3 py-3 px-3 rounded-lg items-center " + (idx % 2 === 0 ? "bg-gray-50" : ""), style: { minHeight: "44px" } }, /* @__PURE__ */ React.createElement("span", { className: "text-xs font-semibold text-gray-500 uppercase tracking-wide w-36 shrink-0" }, label), editing && editEl ? editEl : /* @__PURE__ */ React.createElement("span", { className: "text-sm font-medium text-gray-800" }, value || "\u2014"));
     const saveEdit = () => {
-      var updatedOpp = { ...form, lastUpdated: (/* @__PURE__ */ new Date()).toLocaleDateString() };
+      var updatedOpp = { ...form, activities: opp.activities, lastUpdated: (/* @__PURE__ */ new Date()).toLocaleDateString() };
       if (form.status === "Closed-Won" && opp.status !== "Closed-Won") {
         slackDealWonAlert(updatedOpp, client);
       }
