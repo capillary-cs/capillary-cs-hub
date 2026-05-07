@@ -1005,49 +1005,29 @@ var _unused = (() => {
     const [showAdd, setShowAdd] = useState(false);
     const emptyForm = { clientContact: "", clientTitle: "", clientEmail: "", healthStatus: "Needs Established", capPrimary: "", capSecondary: "", comments: "", linkedIn: "", expectations: "", painPoints: "" };
     const [addForm, setAddForm] = useState({ ...emptyForm });
-    const startEdit = (c) => {
-      setEditing(c.id);
-      setEditForm({ ...c });
-      setExpandedId(null);
-    };
-    const saveEdit = () => {
-      onUpdate(contacts.map((c) => c.id === editing ? editForm : c));
-      setEditing(null);
-    };
-    const deleteContact = (id) => {
-      onUpdate(contacts.filter((c) => c.id !== id));
-      if (expandedId === id) setExpandedId(null);
-    };
+    const startEdit = (c) => { setEditing(c.id); setEditForm({ ...c }); setExpandedId(null); };
+    const saveEdit = () => { onUpdate(contacts.map((c) => c.id === editing ? editForm : c)); setEditing(null); };
+    const deleteContact = (id) => { onUpdate(contacts.filter((c) => c.id !== id)); if (expandedId === id) setExpandedId(null); };
     const addContact = () => {
-      const newC = { ...addForm, id: "rel_" + Date.now() };
-      onUpdate([...contacts, newC]);
+      onUpdate([...contacts, { ...addForm, id: "rel_" + Date.now() }]);
       setAddForm({ ...emptyForm });
       setShowAdd(false);
     };
-    const inp = (obj, setObj, key, placeholder, type = "text") => /* @__PURE__ */ React.createElement(
-      "input",
-      {
-        type,
-        value: obj[key] || "",
-        onChange: (e) => setObj({ ...obj, [key]: e.target.value }),
-        placeholder,
-        className: "text-xs border border-gray-200 rounded-lg px-2 py-1.5 w-full focus:outline-none focus:ring-1 focus:ring-sky-500"
-      }
-    );
-    const ta = (obj, setObj, key, placeholder) => /* @__PURE__ */ React.createElement(
-      "textarea",
-      {
-        value: obj[key] || "",
-        onChange: (e) => setObj({ ...obj, [key]: e.target.value }),
-        placeholder,
-        rows: 3,
-        className: "text-xs border border-gray-200 rounded-lg px-2 py-1.5 w-full focus:outline-none focus:ring-1 focus:ring-sky-500 resize-y"
-      }
-    );
+    const inp = (obj, setObj, key, placeholder, type = "text") => /* @__PURE__ */ React.createElement("input", {
+      type, value: obj[key] || "",
+      onChange: (e) => setObj({ ...obj, [key]: e.target.value }),
+      placeholder,
+      className: "text-xs border border-gray-200 rounded-lg px-2 py-1.5 w-full focus:outline-none focus:ring-1 focus:ring-sky-500"
+    });
+    const ta = (obj, setObj, key, placeholder) => /* @__PURE__ */ React.createElement("textarea", {
+      value: obj[key] || "",
+      onChange: (e) => setObj({ ...obj, [key]: e.target.value }),
+      placeholder, rows: 3,
+      className: "text-xs border border-gray-200 rounded-lg px-2 py-1.5 w-full focus:outline-none focus:ring-1 focus:ring-sky-500 resize-y"
+    });
     const normalizeStatus = (v) => {
       if (!v) return "";
-      const exact = REL_STATUSES.find((r) => r.value === v);
-      if (exact) return v;
+      if (REL_STATUSES.find((r) => r.value === v)) return v;
       if (v.includes("Saturday")) return "Client Welcomes a Saturday Text";
       if (v.includes("Solid")) return "Solid Positive Business Relationship";
       if (v.includes("Vendor")) return "Strictly Business (Vendor)";
@@ -1055,45 +1035,42 @@ var _unused = (() => {
       if (v.includes("Needs") || v.includes("Progress") || v.includes("Building")) return "Needs Established";
       return "";
     };
-    const sel = (obj, setObj, key) => /* @__PURE__ */ React.createElement(
-      "select",
-      {
-        value: normalizeStatus(obj[key]) || "",
-        onChange: (e) => setObj({ ...obj, [key]: e.target.value }),
-        className: "text-xs border border-gray-200 rounded-lg px-2 py-1.5 w-full focus:outline-none focus:ring-1 focus:ring-sky-500"
-      },
+    const sel = (obj, setObj, key) => /* @__PURE__ */ React.createElement("select", {
+      value: normalizeStatus(obj[key]) || "",
+      onChange: (e) => setObj({ ...obj, [key]: e.target.value }),
+      className: "text-xs border border-gray-200 rounded-lg px-2 py-1.5 w-full focus:outline-none focus:ring-1 focus:ring-sky-500"
+    },
       /* @__PURE__ */ React.createElement("option", { value: "" }, "— Select status —"),
       REL_STATUSES.map((r) => /* @__PURE__ */ React.createElement("option", { key: r.value, value: r.value }, r.value))
     );
-    const fieldGrid = (obj, setObj, isEdit) => /* @__PURE__ */ React.createElement(React.Fragment, null,
+    const sectionLabel = (text) => /* @__PURE__ */ React.createElement("div", { className: "text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2" }, text);
+    const inlineLabel = (text) => /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 mb-0.5" }, text);
+    const fieldGrid = (obj, setObj) => /* @__PURE__ */ React.createElement(React.Fragment, null,
       /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-3 gap-3 mb-3" },
-        /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mb-1" }, "Client Name"), inp(obj, setObj, "clientContact", "Name")),
-        /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mb-1" }, "Title / Role"), inp(obj, setObj, "clientTitle", "Title")),
-        /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mb-1" }, "Email"), inp(obj, setObj, "clientEmail", "email@company.com", "email"))
+        /* @__PURE__ */ React.createElement("div", null, inlineLabel("Client Name"), inp(obj, setObj, "clientContact", "Name")),
+        /* @__PURE__ */ React.createElement("div", null, inlineLabel("Title / Role"), inp(obj, setObj, "clientTitle", "Title")),
+        /* @__PURE__ */ React.createElement("div", null, inlineLabel("Email"), inp(obj, setObj, "clientEmail", "email@company.com", "email"))
       ),
       /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-3 gap-3 mb-3" },
-        /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mb-1" }, "Relationship Status"), sel(obj, setObj, "healthStatus")),
-        /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mb-1" }, "Capillary Primary"), inp(obj, setObj, "capPrimary", "Primary contact")),
-        /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mb-1" }, "Capillary Secondary"), inp(obj, setObj, "capSecondary", "Secondary contact"))
+        /* @__PURE__ */ React.createElement("div", null, inlineLabel("Relationship Status"), sel(obj, setObj, "healthStatus")),
+        /* @__PURE__ */ React.createElement("div", null, inlineLabel("Capillary Primary"), inp(obj, setObj, "capPrimary", "Primary contact")),
+        /* @__PURE__ */ React.createElement("div", null, inlineLabel("Capillary Secondary"), inp(obj, setObj, "capSecondary", "Secondary contact"))
       ),
-      /* @__PURE__ */ React.createElement("div", { className: "mb-3" },
-        /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mb-1" }, "LinkedIn URL"),
-        inp(obj, setObj, "linkedIn", "https://linkedin.com/in/...")
-      ),
+      /* @__PURE__ */ React.createElement("div", { className: "mb-3" }, inlineLabel("LinkedIn URL"), inp(obj, setObj, "linkedIn", "https://linkedin.com/in/...")),
       /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-3 gap-3 mb-3" },
-        /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mb-1" }, "Notes"), ta(obj, setObj, "comments", "Notes / context")),
-        /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mb-1" }, "Expectations"), ta(obj, setObj, "expectations", "What does this person expect from the program?")),
-        /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mb-1" }, "Pain Points"), ta(obj, setObj, "painPoints", "Key challenges or frustrations"))
+        /* @__PURE__ */ React.createElement("div", null, inlineLabel("Notes"), ta(obj, setObj, "comments", "Notes / context")),
+        /* @__PURE__ */ React.createElement("div", null, inlineLabel("Expectations"), ta(obj, setObj, "expectations", "What does this person expect from the program?")),
+        /* @__PURE__ */ React.createElement("div", null, inlineLabel("Pain Points"), ta(obj, setObj, "painPoints", "Key challenges or frustrations"))
       )
     );
     return /* @__PURE__ */ React.createElement("div", { className: "card" },
       /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-4" },
         /* @__PURE__ */ React.createElement("h3", { className: "font-semibold text-gray-700" }, "Relationship Mapping (", contacts.length, ")"),
-        canEdit && /* @__PURE__ */ React.createElement("button", { onClick: () => setShowAdd(!showAdd), className: "btn-primary px-3 py-1.5 text-xs" }, "+ Add Contact")
+        canEdit && /* @__PURE__ */ React.createElement("button", { onClick: () => { setShowAdd(!showAdd); setEditing(null); }, className: "btn-primary px-3 py-1.5 text-xs" }, "+ Add Contact")
       ),
       showAdd && /* @__PURE__ */ React.createElement("div", { className: "mb-4 p-4 bg-sky-50 border border-sky-100 rounded-xl" },
         /* @__PURE__ */ React.createElement("div", { className: "font-semibold text-xs text-sky-800 mb-3 uppercase tracking-wide" }, "New Contact"),
-        fieldGrid(addForm, setAddForm, false),
+        fieldGrid(addForm, setAddForm),
         /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" },
           /* @__PURE__ */ React.createElement("button", { onClick: addContact, className: "btn-primary text-xs px-4 py-1.5" }, "Save Contact"),
           /* @__PURE__ */ React.createElement("button", { onClick: () => setShowAdd(false), className: "btn-secondary text-xs px-4 py-1.5" }, "Cancel")
@@ -1104,13 +1081,13 @@ var _unused = (() => {
         : /* @__PURE__ */ React.createElement("div", { className: "overflow-x-auto" },
             /* @__PURE__ */ React.createElement("table", { className: "w-full text-xs" },
               /* @__PURE__ */ React.createElement("thead", null,
-                /* @__PURE__ */ React.createElement("tr", { className: "border-b border-gray-100" },
+                /* @__PURE__ */ React.createElement("tr", { className: "border-b-2 border-gray-100" },
                   /* @__PURE__ */ React.createElement("th", { className: "w-8 py-2.5 px-2" }),
                   /* @__PURE__ */ React.createElement("th", { className: "text-left py-2.5 px-3 font-semibold text-gray-500" }, "Name"),
                   /* @__PURE__ */ React.createElement("th", { className: "text-left py-2.5 px-3 font-semibold text-gray-500" }, "Title / Role"),
                   /* @__PURE__ */ React.createElement("th", { className: "text-left py-2.5 px-3 font-semibold text-gray-500" }, "Rel. Status"),
                   /* @__PURE__ */ React.createElement("th", { className: "text-left py-2.5 px-3 font-semibold text-gray-500" }, "Cap. Owner"),
-                  /* @__PURE__ */ React.createElement("th", { className: "text-left py-2.5 px-3 font-semibold text-gray-500 w-20" }, "Actions")
+                  /* @__PURE__ */ React.createElement("th", { className: "w-20 py-2.5 px-3" })
                 )
               ),
               /* @__PURE__ */ React.createElement("tbody", null,
@@ -1119,9 +1096,9 @@ var _unused = (() => {
                   if (editing === c.id) {
                     return /* @__PURE__ */ React.createElement(React.Fragment, { key: c.id },
                       /* @__PURE__ */ React.createElement("tr", { className: "bg-blue-50" },
-                        /* @__PURE__ */ React.createElement("td", { colSpan: 6, className: "px-3 py-3" },
+                        /* @__PURE__ */ React.createElement("td", { colSpan: 6, className: "px-4 py-4" },
                           /* @__PURE__ */ React.createElement("div", { className: "font-semibold text-xs text-blue-800 mb-3 uppercase tracking-wide" }, "Edit Contact"),
-                          fieldGrid(editForm, setEditForm, true),
+                          fieldGrid(editForm, setEditForm),
                           /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" },
                             /* @__PURE__ */ React.createElement("button", { onClick: saveEdit, className: "btn-primary text-xs px-4 py-1.5" }, "✓ Save"),
                             /* @__PURE__ */ React.createElement("button", { onClick: () => setEditing(null), className: "btn-secondary text-xs px-4 py-1.5" }, "Cancel")
@@ -1130,60 +1107,72 @@ var _unused = (() => {
                       )
                     );
                   }
+                  const hasDetails = c.clientEmail || c.linkedIn || c.capSecondary || c.comments || c.expectations || c.painPoints;
                   return /* @__PURE__ */ React.createElement(React.Fragment, { key: c.id },
-                    /* @__PURE__ */ React.createElement("tr", { className: "border-b border-gray-50 hover:bg-gray-50 cursor-pointer", onClick: () => setExpandedId(isExpanded ? null : c.id) },
-                      /* @__PURE__ */ React.createElement("td", { className: "px-2 py-2.5 text-gray-400 text-center select-none" }, isExpanded ? "▼" : "▶"),
-                      /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2.5 font-medium text-gray-800" }, c.clientContact || "—"),
-                      /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2.5 text-gray-600" }, c.clientTitle || "—"),
-                      /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2.5" },
-                        /* @__PURE__ */ React.createElement("span", { className: `rel-badge ${relStatusClass(c.healthStatus)}` }, relStatusShort(c.healthStatus))
+                    /* @__PURE__ */ React.createElement("tr", {
+                      className: "border-b border-gray-100 hover:bg-gray-50 transition-colors " + (hasDetails ? "cursor-pointer" : ""),
+                      onClick: hasDetails ? () => setExpandedId(isExpanded ? null : c.id) : undefined
+                    },
+                      /* @__PURE__ */ React.createElement("td", { className: "px-2 py-3 text-center select-none" },
+                        hasDetails
+                          ? /* @__PURE__ */ React.createElement("span", { className: "text-gray-300 text-xs" }, isExpanded ? "▼" : "▶")
+                          : /* @__PURE__ */ React.createElement("span", { className: "text-gray-100 text-xs" }, "▶")
                       ),
-                      /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2.5 text-gray-700" }, c.capPrimary || "—"),
-                      /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2.5" },
-                        /* @__PURE__ */ React.createElement("div", { className: "flex gap-2", onClick: (e) => e.stopPropagation() },
+                      /* @__PURE__ */ React.createElement("td", { className: "px-3 py-3 font-medium text-gray-800" }, c.clientContact || "—"),
+                      /* @__PURE__ */ React.createElement("td", { className: "px-3 py-3 text-gray-500" }, c.clientTitle || "—"),
+                      /* @__PURE__ */ React.createElement("td", { className: "px-3 py-3" },
+                        /* @__PURE__ */ React.createElement("span", { className: "rel-badge " + relStatusClass(c.healthStatus) }, relStatusShort(c.healthStatus))
+                      ),
+                      /* @__PURE__ */ React.createElement("td", { className: "px-3 py-3 text-gray-700" }, c.capPrimary || "—"),
+                      /* @__PURE__ */ React.createElement("td", { className: "px-3 py-3" },
+                        /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 justify-end", onClick: (e) => e.stopPropagation() },
                           canEdit && /* @__PURE__ */ React.createElement(React.Fragment, null,
-                            /* @__PURE__ */ React.createElement("button", { onClick: () => startEdit(c), className: "text-gray-400 hover:text-sky-700 transition-colors", title: "Edit" }, "✏️"),
-                            /* @__PURE__ */ React.createElement("button", { onClick: () => deleteContact(c.id), className: "text-gray-300 hover:text-red-500 transition-colors", title: "Delete" }, "🗑️")
+                            /* @__PURE__ */ React.createElement("button", { onClick: () => startEdit(c), className: "text-gray-300 hover:text-sky-600 transition-colors text-sm", title: "Edit" }, "✏️"),
+                            /* @__PURE__ */ React.createElement("button", { onClick: () => deleteContact(c.id), className: "text-gray-300 hover:text-red-400 transition-colors text-sm", title: "Delete" }, "🗑️")
                           )
                         )
                       )
                     ),
-                    isExpanded && /* @__PURE__ */ React.createElement("tr", { className: "bg-gray-50 border-b border-gray-100" },
-                      /* @__PURE__ */ React.createElement("td", { colSpan: 6, className: "px-4 py-3" },
-                        /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-3 gap-4" },
-                          /* @__PURE__ */ React.createElement("div", null,
-                            /* @__PURE__ */ React.createElement("div", { className: "text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2" }, "Contact Details"),
-                            c.clientEmail && /* @__PURE__ */ React.createElement("div", { className: "mb-1" },
-                              /* @__PURE__ */ React.createElement("span", { className: "text-gray-400 mr-1" }, "Email:"),
-                              /* @__PURE__ */ React.createElement("a", { href: "mailto:" + c.clientEmail, className: "text-sky-700 hover:underline" }, c.clientEmail)
+                    isExpanded && /* @__PURE__ */ React.createElement("tr", { className: "border-b border-gray-100" },
+                      /* @__PURE__ */ React.createElement("td", { colSpan: 6, className: "px-3 pb-3 pt-0" },
+                        /* @__PURE__ */ React.createElement("div", { className: "rounded-xl border border-gray-100 bg-gray-50 overflow-hidden" },
+                          /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 2fr 1.5fr", borderTop: "none" } },
+                            /* @__PURE__ */ React.createElement("div", { className: "p-4 border-r border-gray-100" },
+                              sectionLabel("Contact"),
+                              /* @__PURE__ */ React.createElement("div", { className: "space-y-2" },
+                                c.clientEmail && /* @__PURE__ */ React.createElement("div", { className: "flex items-start gap-2" },
+                                  /* @__PURE__ */ React.createElement("span", { className: "text-gray-300 mt-0.5 shrink-0" }, "✉"),
+                                  /* @__PURE__ */ React.createElement("a", { href: "mailto:" + c.clientEmail, className: "text-sky-600 hover:underline break-all leading-tight" }, c.clientEmail)
+                                ),
+                                c.linkedIn && /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" },
+                                  /* @__PURE__ */ React.createElement("span", { className: "text-gray-300 shrink-0" }, "↗"),
+                                  /* @__PURE__ */ React.createElement("a", { href: c.linkedIn, target: "_blank", rel: "noopener noreferrer", className: "text-sky-600 hover:underline" }, "LinkedIn Profile")
+                                ),
+                                c.capSecondary && /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" },
+                                  /* @__PURE__ */ React.createElement("span", { className: "text-gray-300 shrink-0" }, "●"),
+                                  /* @__PURE__ */ React.createElement("span", { className: "text-gray-600" }, c.capSecondary, /* @__PURE__ */ React.createElement("span", { className: "text-gray-400 ml-1 text-xs" }, "(secondary)"))
+                                ),
+                                (!c.clientEmail && !c.linkedIn && !c.capSecondary) && /* @__PURE__ */ React.createElement("span", { className: "text-gray-300" }, "—")
+                              )
                             ),
-                            c.linkedIn && /* @__PURE__ */ React.createElement("div", { className: "mb-1" },
-                              /* @__PURE__ */ React.createElement("span", { className: "text-gray-400 mr-1" }, "LinkedIn:"),
-                              /* @__PURE__ */ React.createElement("a", { href: c.linkedIn, target: "_blank", rel: "noopener noreferrer", className: "text-sky-700 hover:underline" }, "View Profile")
+                            /* @__PURE__ */ React.createElement("div", { className: "p-4 border-r border-gray-100" },
+                              sectionLabel("Notes & Expectations"),
+                              c.comments && /* @__PURE__ */ React.createElement("div", { className: "mb-3" },
+                                /* @__PURE__ */ React.createElement("p", { className: "text-gray-700 whitespace-pre-wrap leading-relaxed" }, c.comments)
+                              ),
+                              c.comments && c.expectations && /* @__PURE__ */ React.createElement("hr", { className: "border-gray-200 my-2" }),
+                              c.expectations && /* @__PURE__ */ React.createElement("div", null,
+                                /* @__PURE__ */ React.createElement("span", { className: "inline-block text-xs font-medium text-sky-700 bg-sky-50 rounded px-1.5 py-0.5 mb-1.5" }, "Expectations"),
+                                /* @__PURE__ */ React.createElement("p", { className: "text-gray-700 whitespace-pre-wrap leading-relaxed" }, c.expectations)
+                              ),
+                              (!c.comments && !c.expectations) && /* @__PURE__ */ React.createElement("span", { className: "text-gray-300" }, "—")
                             ),
-                            c.capSecondary && /* @__PURE__ */ React.createElement("div", { className: "mb-1" },
-                              /* @__PURE__ */ React.createElement("span", { className: "text-gray-400 mr-1" }, "Cap. Secondary:"),
-                              /* @__PURE__ */ React.createElement("span", { className: "text-gray-700" }, c.capSecondary)
-                            ),
-                            (!c.clientEmail && !c.linkedIn && !c.capSecondary) && /* @__PURE__ */ React.createElement("span", { className: "text-gray-300 text-xs" }, "—")
-                          ),
-                          /* @__PURE__ */ React.createElement("div", null,
-                            /* @__PURE__ */ React.createElement("div", { className: "text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2" }, "Notes & Expectations"),
-                            c.comments && /* @__PURE__ */ React.createElement("div", { className: "mb-2" },
-                              /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 mb-0.5" }, "Notes"),
-                              /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-700 whitespace-pre-wrap" }, c.comments)
-                            ),
-                            c.expectations && /* @__PURE__ */ React.createElement("div", null,
-                              /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 mb-0.5" }, "Expectations"),
-                              /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-700 whitespace-pre-wrap" }, c.expectations)
-                            ),
-                            (!c.comments && !c.expectations) && /* @__PURE__ */ React.createElement("span", { className: "text-gray-300 text-xs" }, "—")
-                          ),
-                          /* @__PURE__ */ React.createElement("div", null,
-                            /* @__PURE__ */ React.createElement("div", { className: "text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2" }, "Pain Points"),
-                            c.painPoints
-                              ? /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-700 whitespace-pre-wrap" }, c.painPoints)
-                              : /* @__PURE__ */ React.createElement("span", { className: "text-gray-300 text-xs" }, "—")
+                            /* @__PURE__ */ React.createElement("div", { className: "p-4" },
+                              sectionLabel("Pain Points"),
+                              c.painPoints
+                                ? /* @__PURE__ */ React.createElement("p", { className: "text-gray-700 whitespace-pre-wrap leading-relaxed" }, c.painPoints)
+                                : /* @__PURE__ */ React.createElement("span", { className: "text-gray-300" }, "—")
+                            )
                           )
                         )
                       )
